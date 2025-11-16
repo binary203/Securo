@@ -10,4 +10,4 @@ app.config.from_object('config.DevelopementConfig')
 db = SQLAlchemy(app)
 
 from . import views
-
+from . import models

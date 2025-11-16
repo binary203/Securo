@@ -1,7 +1,5 @@
 #Импорты
-from os import*
-from app import app
+from app import app, db
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run()

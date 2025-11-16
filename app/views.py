@@ -3,13 +3,13 @@
 #Импорты
 from app import app
 from flask import render_template, request, redirect, url_for
+from werkzeug.security import generate_password_hash, gen_salt
 
 #Базовая страница
 @app.route('/')
 def index():
     return render_template('index.html')
-    if request.method == 'POST':
-        return redirect('/scan')
+    
         
 #Сам сканнер
 @app.route('/scan', methods=['POST'])
@@ -17,8 +17,6 @@ def scan():
     return render_template('scan.html')
 
 #Результаты скана
-@app.route('/results')
+@app.route('/results', methods=['POST'])
 def results():
-    if request.method == 'POST':
-        if 'see_results' in request.form:
-            return 'sex'
+    return 
