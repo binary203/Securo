@@ -37,3 +37,5 @@ class vulnerabilities(db.Model):
     type = db.Column(db.String(46), nullable=False)
     risk_level = db.Column(db.String(25), nullable=False)
 
+with app.app_context():
+    db.create_all()
