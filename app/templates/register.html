@@ -1,0 +1,23 @@
+{% extends "login.html" %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block body %}
+
+<div class="center_text">
+    <h1>REGISTRATION</h1>
+    <title>VulnChecker</title>
+    <form method="POST" action="{{ url_for('registration') }}">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username">
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password">
+        <br>
+        <button type="submit">Зарегестрироваться</button>  
+    </form>
+    <br>
+</div>
+
+{% endblock %}
