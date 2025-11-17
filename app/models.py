@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config.from_object('config.DevelopmentConfig')
@@ -20,8 +20,11 @@ class user(db.Model):
     def __repr__(self):
         return "<{}:{}>".format(self.id, self.username)
     
-    def password(self, password):
+    def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     
 # сканы для подачи кода в сайт и запуска анализа коода юзера

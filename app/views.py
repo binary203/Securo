@@ -4,6 +4,7 @@ from app import app
 from flask import render_template, request, redirect, url_for, session, flash
 from flask_login import login_required, login_user,current_user, logout_user
 from werkzeug.security import check_password_hash
+from .models import user
 
 
 #Базовая страница
@@ -14,23 +15,24 @@ def index():
 #Логин
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
     if request.method == 'POST':
         login = request.form['login']
         password = request.form['password']
-        user = user.query.filter_by(username=login)
+        user = user.query.filter_by(username=login).first()
         if user and check_password_hash(pwhash=password):
             login_user(user)
             return redirect('/scan')
+        
+    return render_template('login.html')
+
 
 @app.route('/reg', methods=['GET', 'POST'])
 def registration():
-    return render_template('register.html')
     if request.method == 'POST':
-        username = request.form['login']
+        username = request.form['username']
         password = request.form['password']
         
-        existing_user = user.query.filter_by(username=login)
+        existing_user = user.query.filter_by(username=username)
         if existing_user:
             flash('Такой пользователь уже есть!')
             return redirect('/reg')
@@ -45,7 +47,9 @@ def registration():
         # Автоматически логиним пользователя
         login_user(new_user)
         flash('Регистрация успешна!')
-        return redirect('/')
+        return redirect('/')    
+    return render_template('register.html')
+
         
 #Сам сканнер
 @app.route('/scan', methods=['POST'])
