@@ -11,6 +11,6 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
     
 #! Конфиг для разработки, делитнуть на релизе!
-class DevelopementConfig(BaseConfig):
+class DevelopmentConfig(BaseConfig):
     DEBUG: bool = True
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///default.db'
