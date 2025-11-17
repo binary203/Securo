@@ -1,10 +1,10 @@
 #Файл для всех роутов
 #Импорты
-from app import app
+from app import app, db
 from flask import render_template, request, redirect, url_for, session, flash
 from flask_login import login_required, login_user,current_user, logout_user
 from werkzeug.security import check_password_hash
-from .models import user
+from .models import User
 
 
 #Базовая страница
@@ -15,14 +15,6 @@ def index():
 #Логин
 @app.route('/login/', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        login = request.form['login']
-        password = request.form['password']
-        user = user.query.filter_by(username=login).first()
-        if user and check_password_hash(pwhash=password):
-            login_user(user)
-            return redirect('/scan')
-        
     return render_template('login.html')
 
 
@@ -32,12 +24,7 @@ def registration():
         username = request.form['username']
         password = request.form['password']
         
-        existing_user = user.query.filter_by(username=username)
-        if existing_user:
-            flash('Такой пользователь уже есть!')
-            return redirect('/reg')
-        
-        new_user = user(username=username)
+        new_user = User(username=username)
         new_user.set_password(password)
         
         # Сохраняем в БД
@@ -45,7 +32,7 @@ def registration():
         db.session.commit()
         
         # Автоматически логиним пользователя
-        login_user(new_user)
+        login_user()
         flash('Регистрация успешна!')
         return redirect('/')    
     return render_template('register.html')
