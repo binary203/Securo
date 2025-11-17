@@ -15,6 +15,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 from . import views
+from . import models
 
 @login_manager.user_loader
 def load_user():
