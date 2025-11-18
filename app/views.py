@@ -12,13 +12,20 @@ from .models import User
 def index():
     return render_template('index.html')
 
+@app.route('/user/')
+def profile():
+    return render_template('profile.html')
+
 #Логин
-@app.route('/login/', methods=['GET', 'POST'])
+@app.route('/user/login/', methods=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    if current_user.is_authinticated:
+        return redirect('/scan')
+    if request.method == 'POST':
+        user = session.get(User)
 
 
-@app.route('/reg', methods=['GET', 'POST'])
+@app.route('/user/registration', methods=['GET', 'POST'])
 def registration():
     if request.method == 'POST':
         username = request.form['username']
@@ -39,11 +46,11 @@ def registration():
 
         
 #Сам сканнер
-@app.route('/scan', methods=['POST'])
+@app.route('user/scan', methods=['POST'])
 def scan():
     return render_template('scan.html')
 
 #Результаты скана
-@app.route('/results', methods=['POST'])
+@app.route('user/results', methods=['POST'])
 def results():
     return 
