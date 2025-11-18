@@ -1,24 +1,24 @@
 {% extends "base.html" %}
 
-{% block head%}
+{% block head %}
 
-{% endblock  %}
+{% endblock %}
 
 {% block body %}
-
-<div class="center_text">
-    <h1>LOGIN</h1>
-    <form>
-        <label for="username">Login:</label>
-        <input type="text" id="username" name="username">
-    </form>
-    <form>
-        <label for="password">Password:</label>
-        <input type="text" id="password" name="password">
-    </form>
-    <br>
-    <a href="{{ url_for('/user/registration') }}">Нет аккаунта? Зарегистрироваться</a>
-
-</div>
-
+  <h1>Sign In</h1>
+  <form action="" method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <p>
+      {{ form.username.label }}<br>
+      {{ form.username(size=32) }}
+    </p>
+    <p>
+      {{ form.password.label }}<br>
+      {{ form.password(size=32) }}
+    </p>
+    <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
+    <p>{{ form.submit() }}</p>
+  </form>
+  <br>
+  <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
 {% endblock %}

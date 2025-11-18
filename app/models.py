@@ -4,12 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-
-#Инициализация
-app = Flask(__name__)
-app.config.from_object('config.DevelopmentConfig')
-
-db = SQLAlchemy(app)
+from app import app, db, login_manager
 
 # юзеры для авторизации, если отменяем ее то делитнуть
 class User(db.Model, UserMixin): 
@@ -28,7 +23,10 @@ class User(db.Model, UserMixin):
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
+    
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
     
 # сканы для подачи кода в сайт и запуска анализа коода юзера
 class Scans(db.Model):
@@ -52,7 +50,3 @@ class Vulnerability(db.Model):
     vulnerability_type = db.Column(db.String(50), nullable=False)
     risk_level = db.Column(db.String(25), nullable=False)
     scan = db.relationship('Scans', backref='vulnerabilities')
-
-#Без этой хуйни дб создается пустой
-with app.app_context():
-    db.create_all()
