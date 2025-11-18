@@ -12,15 +12,11 @@ from .forms import LoginForm
 def index():
     return render_template('index.html')
 
-@app.route('/user/')
-def profile():
-    return render_template('profile.html')
-
 #Логин
-@app.route('/user/login/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('scan'))
+        return redirect(url_for('profile'))
     
     form = LoginForm()    
     if form.validate_on_submit():
@@ -33,7 +29,7 @@ def login():
         return redirect(url_for('index'))  
     return render_template('login.html', title='Login', form=form)
     
-@app.route('/user/registration', methods=['GET', 'POST'])
+@app.route('/registration', methods=['GET', 'POST'])
 def registration():
     if request.method == 'POST':
         username = request.form['username']
@@ -57,18 +53,22 @@ def registration():
         return redirect('/')    
     return render_template('register.html')
 
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html')
         
 #Сам сканнер
-@app.route('/user/scan', methods=['POST', 'GET'])
+@app.route('/profile/scan', methods=['POST', 'GET'])
 def scan():
     return render_template('scan.html')
 
 #Результаты скана
-@app.route('/user/results', methods=['POST'])
+@app.route('/profile/results', methods=['POST'])
 def results():
     return "Results page"
 
-@app.route('/user/logout')
+@app.route('/profile/logout')
 @login_required
 def logout():
     logout_user()
