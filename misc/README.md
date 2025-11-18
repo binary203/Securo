@@ -1,2 +1,25 @@
-# Vulnerability_Checker
-Vulnerability Analysis System with database 
+# ***Vulnerability Checker***
+
+## 🎯**Цели:**
+
+- **Автоматизация**
+
+- **Уменьшение расходов компаний**
+
+- **Упрощение анализа уязвимостей**
+
+## 🔨**Инструменты**
+
+- *Python*🐍
+
+- *Flask*
+
+- *SQLAlchemy*
+
+- *MySQL/SQLite*
+
+## 👨‍💻**Команда**
+
+- Максим **Binary**
+
+- Андрей **CHMOSHN**
