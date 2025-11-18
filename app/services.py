@@ -1,6 +1,6 @@
 from flask import current_app
-from .models import db, scan, vulnerability, user
-import requests
+from .models import db, Scans, Vulnerability, User
+from flask import request
 import time
 
 
@@ -19,29 +19,29 @@ class SemgrepAPIClient:
     # получить список deployments
     def get_deployments(self):
         url = f"{self.base_url}/deployments"
-        response = requests.get(url, headers=self.headers)
+        response = request.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
     # создать новый скан
     def create_scan(self, deployment_id: str, payload: dict):
         url = f"{self.base_url}/deployments/{deployment_id}/scans"
-        response = requests.post(url, headers=self.headers, json=payload)
+        response = request.post(url, headers=self.headers, json=payload)
         response.raise_for_status()
         return response.json()
 
     # получение статуса скана
     def get_scan_status(self, deployment_id: str, scan_id: str):
         url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = requests.get(url, headers=self.headers)
+        response = request.get(url, headers=self.headers)
         response.raise_for_status()
         data = response.json()
-        return data.get("scan", {}).get("status", "unknown")
+        return data.get("Scans", {}).get("status", "unknown")
 
     # получение резултатов скана
     def get_scan_results(self, deployment_id: str, scan_id: str):
         url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = requests.get(url, headers=self.headers)
+        response = request.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
@@ -87,7 +87,7 @@ class SemgrepService:
     def _create_scan(self, payload: dict) -> str:
         # cоздание задачи на сканирование
         response = self.client.create_scan(self.deployment_id, payload)
-        scan_id = response.get("scan", {}).get("id")
+        scan_id = response.get("Scans", {}).get("id")
         if not scan_id:
             raise RuntimeError("scan_id не получен")
         return scan_id
