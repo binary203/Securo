@@ -8,17 +8,16 @@
 
 <div class="center_text">
     <h1>LOGIN</h1>
-    <title>VulnChecker</title>
     <form>
-        <label for="login">Login:</label>
-        <input type="text" id="login" name="login">
+        <label for="username">Login:</label>
+        <input type="text" id="username" name="username">
     </form>
     <form>
         <label for="password">Password:</label>
         <input type="text" id="password" name="password">
     </form>
     <br>
-    <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
+    <a href="{{ url_for('/user/registration') }}">Нет аккаунта? Зарегистрироваться</a>
 
 </div>
 
