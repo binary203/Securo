@@ -12,13 +12,9 @@ app.config.from_object('config.DevelopmentConfig')
 db = SQLAlchemy(app)
 migrate = Migrate(app=app, db=db)
 login_manager = LoginManager(app)
+login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 from . import views
 from . import models
-
-@login_manager.user_loader
-def load_user():
-    return models.user.query.get(int(user_id))
-
 
