@@ -1,24 +1,35 @@
 {% extends "base.html" %}
 
 {% block head %}
-
 {% endblock %}
 
 {% block body %}
-  <h1>Sign In</h1>
-  <form action="" method="post" novalidate>
-    {{ form.hidden_tag() }}
-    <p>
-      {{ form.username.label }}<br>
-      {{ form.username(size=32) }}
-    </p>
-    <p>
-      {{ form.password.label }}<br>
-      {{ form.password(size=32) }}
-    </p>
-    <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
-    <p>{{ form.submit() }}</p>
-  </form>
-  <br>
-  <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
+<div class="text">
+  <div class="sign_in">
+    <h1>WHO AM I?</h1>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div>
+            {{ form.username.label }}<br>
+            {{ form.username(size=32) }}
+        </div>
+        <br>
+        <div>
+            {{ form.password.label }}<br>
+            {{ form.password(size=32) }}
+        </div>
+        <br>
+        <div>
+            {{ form.remember_me() }} {{ form.remember_me.label }}
+        </div>
+        <br>
+        <div>
+            {{ form.submit() }}
+        </div>
+        <br>
+    </form>
+    <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
+  </div>
+
+</div>
 {% endblock %}
