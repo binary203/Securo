@@ -5,7 +5,7 @@ from flask import render_template, request, redirect, url_for, session, flash
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User
 import sqlalchemy as sql
-from .forms import LoginForm
+from .forms import LoginForm, ScanForm
 from .services import run_scanner_service
 
 
@@ -70,11 +70,14 @@ def registration():
 @login_required  # проверка на авторизацию
 def scan():
     # запуск сканера и ввод
+    form = ScanForm()
+    
     try:
         if request.method == "POST":
             scanner = run_scanner_service()
-            code = request.form["code"]
-            repo = request.form["repo_url"]
+            code = request.form.get("code", "").strip()
+            repo = request.form.get("repo", "").strip()
+            print(repo)
             # проверка входных данных
             if code:
                 result = scanner.run_code_scan(code)
@@ -82,20 +85,20 @@ def scan():
                 result = scanner.run_repo_scan(repo)
             else:
                 flash("Укажите код или URL репозитория на GitHub")
-                return redirect(url_for("index"))
+                return render_template('scan.html', form=form)
             return render_template("results.html", result=result)
 
     # если ошибка то кинет на index
     except ValueError as e:
         flash(f"Ошибка конфигурации: {str(e)}")
-        return redirect(url_for("index"))
+        return render_template('scan.html', form=form)
     except RuntimeError as e:
         flash(f"Ошибка сканирования: {str(e)}")
-        return redirect(url_for("index"))
+        return render_template('scan.html', form=form)
     except Exception as e:
         flash(f"Ошибка: {str(e)}")
-        return redirect(url_for("index"))
-    return render_template('scan.html')
+        return render_template('scan.html', form=form)
+    return render_template('scan.html', form=form)
 
 # Результаты скана
 @app.route("/profile/results", methods=["POST"])
