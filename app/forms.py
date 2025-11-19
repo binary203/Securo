@@ -1,7 +1,9 @@
+#Импорты
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
 
+#Форма для логина
 class LoginForm(FlaskForm):
   username = StringField('Имя', validators=[DataRequired()])
   password = PasswordField('Пароль', validators=[DataRequired()])

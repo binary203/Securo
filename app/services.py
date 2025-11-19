@@ -1,6 +1,6 @@
 from flask import current_app
 from .models import db, Scans, Vulnerability, User
-from flask import request
+import requests
 import time
 
 
@@ -19,21 +19,21 @@ class SemgrepAPIClient:
     # получить список deployments
     def get_deployments(self):
         url = f"{self.base_url}/deployments"
-        response = request.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
     # создать новый скан
     def create_scan(self, deployment_id: str, payload: dict):
         url = f"{self.base_url}/deployments/{deployment_id}/scans"
-        response = request.post(url, headers=self.headers, json=payload)
+        response = requests.post(url, headers=self.headers, json=payload)
         response.raise_for_status()
         return response.json()
 
     # получение статуса скана
     def get_scan_status(self, deployment_id: str, scan_id: str):
         url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = request.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         data = response.json()
         return data.get("Scans", {}).get("status", "unknown")
@@ -41,7 +41,7 @@ class SemgrepAPIClient:
     # получение резултатов скана
     def get_scan_results(self, deployment_id: str, scan_id: str):
         url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = request.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         return response.json()
 
