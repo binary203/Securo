@@ -25,7 +25,7 @@ def profile():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("scan"))
+        return redirect(url_for("profile"))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -71,18 +71,19 @@ def registration():
 def scan():
     # запуск сканера и ввод
     try:
-        scanner = run_scanner_service()
-        code = request.form.get("code")
-        repo = request.form.get("repo_url")
-        # проверка входных данных
-        if code:
-            result = scanner.run_code_scan(code)
-        elif repo:
-            result = scanner.run_repo_scan(repo)
-        else:
-            flash("Укажите код или URL репозитория на GitHub")
-            return redirect(url_for("index"))
-        return render_template("results.html", result=result)
+        if request.method == "POST":
+            scanner = run_scanner_service()
+            code = request.form["code"]
+            repo = request.form["repo_url"]
+            # проверка входных данных
+            if code:
+                result = scanner.run_code_scan(code)
+            elif repo:
+                result = scanner.run_repo_scan(repo)
+            else:
+                flash("Укажите код или URL репозитория на GitHub")
+                return redirect(url_for("index"))
+            return render_template("results.html", result=result)
 
     # если ошибка то кинет на index
     except ValueError as e:
@@ -94,6 +95,7 @@ def scan():
     except Exception as e:
         flash(f"Ошибка: {str(e)}")
         return redirect(url_for("index"))
+    return render_template('scan.html')
 
 # Результаты скана
 @app.route("/profile/results", methods=["POST"])
