@@ -15,7 +15,7 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/profile/")
+@app.route("/profile/", methods=["GET", "POST"])
 @login_required
 def profile():
     return render_template("profile.html")
