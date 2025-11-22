@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block body %}
+<div class="text">
+    <h1>Profile</h1><br>
+    <form action="{{ url_for('logout') }}", method="GET">
+        <button type="submit">Выйти</button>
+    </form>
+    <br>
+    <form action="{{ url_for('scan') }}", method="GET">
+        <button type="submit">Сканирование</button>
+    </form>
+</div>
+{% endblock %}
