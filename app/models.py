@@ -50,3 +50,4 @@ class Vulnerability(db.Model):
     vulnerability_type = db.Column(db.String(50), nullable=False)
     risk_level = db.Column(db.String(25), nullable=False)
     scan = db.relationship('Scans', backref='vulnerabilities')
+    
