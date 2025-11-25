@@ -7,6 +7,9 @@
 <div class="text">
   <div class="sign_in">
     <h1>WHO AM I?</h1>
+    {% for message in get_flashed_messages() %}
+        <p style="color:red;text-align:center">{{ message }}</p>
+    {% endfor %}
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <div>
