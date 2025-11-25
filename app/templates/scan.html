@@ -10,7 +10,7 @@
             {% for message in get_flashed_messages() %}
                 <p style="color:red;text-align:center">{{ message }}</p>
             {% endfor %}
-            <form method="post", action="{{ url_for('results') }}">
+            <form method="post", action="{{ url_for('scan') }}">
                 {{ form.hidden_tag() }}
 
                 <label for="code">CODE: </label><br>

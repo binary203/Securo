@@ -7,7 +7,7 @@ from .models import User
 import sqlalchemy as sql
 from .forms import LoginForm, ScanForm
 from .services import run_service
-
+import time
 
 # Базовая страница
 @app.route("/")
@@ -34,10 +34,13 @@ def login():
         )
 
         if user is None or not user.check_password(form.password.data):
-            flash("Invalid username or password")
+            flash("Неверное имя пользователя или пароль")
             return redirect(url_for("login"))
-        login_user(user, remember=form.remember_me.data)
-        return redirect(url_for("index"))
+        else:
+            flash("Секундочку, проверяю пароль...")
+            time.sleep(5)
+            login_user(user, remember=form.remember_me.data)
+            return redirect(url_for("index"))
     return render_template("login.html", title="Login", form=form)
 
 
@@ -78,6 +81,8 @@ def scan():
             code = request.form.get("code", "").strip()
             repo_url = request.form.get("repo", "").strip()
             
+            global result
+            
             # проверка входных данных
             if code:
                 result = scanner.run_code_scan(code)
@@ -91,8 +96,10 @@ def scan():
             if not result or not isinstance(result, dict):
                 flash("Результаты отсутствуют.")
                 return render_template('scan.html', form=form)
+            
+            return redirect(url_for("results"))
+            
 
-            return render_template("results.html", result=result)
 
     # проверка ошибки, перенаправляет обратно на скан
     except ValueError as e:
@@ -109,7 +116,7 @@ def scan():
 # Результаты скана
 @app.route("/profile/results", methods=["POST"])
 def results():
-    return "Results page"
+    return render_template("results.html", result=result)
 
 
 @app.route("/profile/logout")
