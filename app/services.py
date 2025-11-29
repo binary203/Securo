@@ -63,6 +63,7 @@ class SemgrepCLIService:
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             raise RuntimeError("semgrep CLI не найден.")
+
     # удаление комментариев
     def _code_cleaner(self, code: str) -> str:
         cleaned = self._STR_PATTERN.sub(" ", code)
@@ -70,6 +71,7 @@ class SemgrepCLIService:
         cleaned = self._LINE_COMM_PATTERN.sub(" ", cleaned)
         return cleaned.lower()
         # удаление скрытых символов
+
     def _code_normalizer(self, code: str) -> str:
         if code.startswith("\ufeff"):
             code = code[1:]
@@ -78,7 +80,7 @@ class SemgrepCLIService:
         code = code.replace("\u200c", "")
         code = code.replace("\u200d", "")
         # BOM
-        code = code.replace("\ufeff", "")  
+        code = code.replace("\ufeff", "")
         # нормализация переносов строк
         code = code.replace("\r\n", "\n").replace("\r", "\n")
         return code
@@ -98,7 +100,7 @@ class SemgrepCLIService:
                 return "python"
 
         # JavaScript
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "function ",
@@ -114,14 +116,14 @@ class SemgrepCLIService:
                 return "javascript"
 
         # TypeScript
-        elif any(
+        if any(
             k in code_lower
             for k in ["interface ", "type ", ": string", ": number", ": boolean"]
         ):
             return "typescript"
 
         # Java
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "public class",
@@ -134,7 +136,7 @@ class SemgrepCLIService:
             return "java"
 
         # C/C++
-        elif any(
+        if any(
             k in code_lower
             for k in ["#include", "int main", "printf", "cout", "std::", "namespace "]
         ):
@@ -148,13 +150,13 @@ class SemgrepCLIService:
             )
 
         # Go
-        elif any(
+        if any(
             k in code_lower for k in ["package ", "func ", 'import "', ":= ", "go func"]
         ):
             return "go"
 
         # Ruby
-        elif (
+        if (
             any(
                 k in code_lower
                 for k in ["def ", "end", "require ", "class ", "module "]
@@ -165,7 +167,7 @@ class SemgrepCLIService:
                 return "ruby"
 
         # PHP
-        elif any(
+        if any(
             k in code_lower
             for k in ["<?php", "$_", "->", "function ", "class ", "namespace "]
         ):
@@ -173,7 +175,7 @@ class SemgrepCLIService:
                 return "php"
 
         # C#
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "using system",
@@ -188,7 +190,7 @@ class SemgrepCLIService:
                 return "csharp"
 
         # Scala
-        elif any(
+        if any(
             k in code_lower
             for k in ["object ", "def ", "val ", "var ", "def ", "extends ", "trait "]
         ):
@@ -196,7 +198,7 @@ class SemgrepCLIService:
                 return "scala"
 
         # Kotlin
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "fun ",
@@ -211,7 +213,7 @@ class SemgrepCLIService:
                 return "kotlin"
 
         # Rust
-        elif any(
+        if any(
             k in code_lower
             for k in ["fn ", "let ", "mut ", "struct ", "impl ", "use ", "::"]
         ):
@@ -219,7 +221,7 @@ class SemgrepCLIService:
                 return "rust"
 
         # Swift
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "func ",
@@ -235,7 +237,7 @@ class SemgrepCLIService:
                 return "swift"
 
         # Lua
-        elif any(
+        if any(
             k in code_lower
             for k in ["function ", "local ", "end", "require(", "print("]
         ):
@@ -243,7 +245,7 @@ class SemgrepCLIService:
                 return "lua"
 
         # OCaml
-        elif any(
+        if any(
             k in code_lower
             for k in ["let ", "in ", "match ", "with ", "type ", "module "]
         ):
@@ -251,21 +253,21 @@ class SemgrepCLIService:
                 return "ocaml"
 
         # Terraform
-        elif any(
+        if any(
             k in code_lower
             for k in ["resource ", "provider ", "variable ", "output ", "terraform {"]
         ):
             return "terraform"
 
         # YAML
-        elif any(
+        if any(
             k in code_lower for k in ["---", ":", "apiversion:", "kind:", "metadata:"]
         ):
             if code_lower.count(":") > 3 and "---" in code_lower:
                 return "yaml"
 
         # JSON
-        elif stripped_code.startswith("{") or stripped_code.startswith("["):
+        if stripped_code.startswith("{") or stripped_code.startswith("["):
             try:
                 json.loads(stripped_code)
                 return "json"
@@ -273,14 +275,14 @@ class SemgrepCLIService:
                 pass
 
         # HTML
-        elif any(
+        if any(
             k in code_lower
             for k in ["<!doctype", "<html", "<head", "<body", "<div", "<script"]
         ):
             return "html"
 
         # Dockerfile
-        elif any(
+        if any(
             k in code_lower
             for k in ["from ", "run ", "copy ", "workdir ", "expose ", "cmd "]
         ):
@@ -288,7 +290,7 @@ class SemgrepCLIService:
                 return "dockerfile"
 
         # Bash/Shell
-        elif any(
+        if any(
             k in code_lower
             for k in ["#!/bin/bash", "#!/bin/sh", "echo ", "export ", "if [", "then "]
         ):
@@ -296,7 +298,7 @@ class SemgrepCLIService:
                 return "bash"
 
         # Apex (Salesforce)
-        elif any(
+        if any(
             k in code_lower
             for k in ["public class", "trigger ", "@istest", "database.", "sobject "]
         ):
@@ -304,14 +306,14 @@ class SemgrepCLIService:
                 return "apex"
 
         # Clojure
-        elif any(
+        if any(
             k in code_lower for k in ["(def ", "(defn ", "(let ", "(if ", "(fn ", "ns "]
         ):
             if "(def " in code_lower or "(defn " in code_lower:
                 return "clojure"
 
         # Dart
-        elif any(
+        if any(
             k in code_lower
             for k in ["void main()", "class ", "import ", "dart:", "async ", "await "]
         ):
@@ -319,7 +321,7 @@ class SemgrepCLIService:
                 return "dart"
 
         # Elixir
-        elif any(
+        if any(
             k in code_lower
             for k in ["defmodule ", "def ", "defp ", "defmacro ", "|>", "do: "]
         ):
@@ -327,7 +329,7 @@ class SemgrepCLIService:
                 return "elixir"
 
         # JSX
-        elif any(
+        if any(
             k in code_lower
             for k in ["<div", "<component", "react.", "import react", "jsx", "return ("]
         ):
@@ -336,7 +338,7 @@ class SemgrepCLIService:
                     return "jsx"
 
         # Julia
-        elif any(
+        if any(
             k in code_lower
             for k in ["function ", "end", "using ", "import ", "::", "println("]
         ):
@@ -344,14 +346,14 @@ class SemgrepCLIService:
                 return "julia"
 
         # Jsonnet
-        elif any(
+        if any(
             k in code_lower for k in ["local ", "function(", "self.", "super.", "std."]
         ):
             if "local " in code_lower and "std." in code_lower:
                 return "jsonnet"
 
         # Lisp
-        elif any(
+        if any(
             k in code_lower
             for k in ["(defun ", "(defvar ", "(setq ", "(if ", "(let ", "(lambda "]
         ):
@@ -359,7 +361,7 @@ class SemgrepCLIService:
                 return "lisp"
 
         # R
-        elif any(
+        if any(
             k in code_lower
             for k in ["<-", "function(", "library(", "data.frame", "ggplot2", "print("]
         ):
@@ -367,7 +369,7 @@ class SemgrepCLIService:
                 return "r"
 
         # Scheme
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "(define ",
@@ -383,7 +385,7 @@ class SemgrepCLIService:
                 return "scheme"
 
         # Solidity
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "pragma solidity",
@@ -398,7 +400,7 @@ class SemgrepCLIService:
                 return "solidity"
 
         # TSX
-        elif any(
+        if any(
             k in code_lower
             for k in [
                 "<div",
@@ -413,7 +415,7 @@ class SemgrepCLIService:
                 return "tsx"
 
         # XML
-        elif any(k in code_lower for k in ["<?xml", "<root", "<element", "<tag", "</"]):
+        if any(k in code_lower for k in ["<?xml", "<root", "<element", "<tag", "</"]):
             if "<?xml" in code_lower or ("<" in code_lower and "</" in code_lower):
                 return "xml"
 
@@ -438,7 +440,16 @@ class SemgrepCLIService:
                 f.write(normalized_code)
 
             result = subprocess.run(
-                ["semgrep", "--config", self.ruleset, "-q", "--json", temp_file],
+                [
+                    "semgrep",
+                    "--config",
+                    self.ruleset,
+                    "-q",
+                    "--max-memory",
+                    "3000",
+                    "--json",
+                    temp_file,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=300,
@@ -488,7 +499,16 @@ class SemgrepCLIService:
                 )
 
             scan = subprocess.run(
-                ["semgrep", "--config", self.ruleset, "-q", "--json", repo_dir],
+                [
+                    "semgrep",
+                    "--config",
+                    self.ruleset,
+                    "-q",
+                    "--max-memory",
+                    "3000",
+                    "--json",
+                    repo_dir,
+                ],
                 capture_output=True,
                 text=True,
                 timeout=300,
@@ -507,6 +527,64 @@ class SemgrepCLIService:
         if not repo_url or not repo_url.strip():
             raise ValueError("Вставьте URL репозитория")
         return self._run_repo_scan(repo_url)
+
+    # внутренний метод сканирования файла
+    def _run_file_scan(self, file_path: str) -> dict:
+        if not os.path.exists(file_path):
+            raise ValueError(f"Файл не найден: {file_path}")
+
+        if not os.path.isfile(file_path):
+            raise ValueError(f"Указанный путь не является файлом: {file_path}")
+
+        file_ext = os.path.splitext(file_path)[1].lower()
+        file_name = os.path.basename(file_path).lower()
+
+        detected_language = None
+        for lang, ext in self.Language.items():
+            if file_ext == ext or (file_name == "dockerfile" and lang == "dockerfile"):
+                detected_language = lang
+                break
+
+        if not detected_language:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    code_content = f.read()
+                detected_language = self._detect_language(code_content)
+            except Exception as e:
+                raise RuntimeError(f"Не удалось определить язык: {str(e)}")
+
+        file_scan = subprocess.run(
+            [
+                "semgrep",
+                "--config",
+                self.ruleset,
+                "-q",
+                "--max-memory",
+                "3000",
+                "--json",
+                file_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+        if file_scan.returncode != 0:
+            error = file_scan.stderr or file_scan.stdout or "Неизвестная ошибка"
+            raise RuntimeError(
+                f"Ошибка сканирования файла (язык: {detected_language}, файл: {file_path}): {error}"
+            )
+
+        try:
+            return json.loads(file_scan.stdout)
+        except json.JSONDecodeError:
+            raise RuntimeError(f"Ошибка парсинга результата: {file_scan.stdout[:200]}")
+
+    # публичный метод для сканирования файла
+    def run_file_scan(self, file_path: str) -> dict:
+        if not file_path or not file_path.strip():
+            raise ValueError("Путь к файлу не указан")
+        return self._run_file_scan(file_path)
 
 
 # фабричная функция для views.py

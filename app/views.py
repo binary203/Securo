@@ -7,7 +7,9 @@ from .models import User
 import sqlalchemy as sql
 from .forms import LoginForm, ScanForm
 from .services import run_service
-import time
+import tempfile
+import os
+
 
 # Базовая страница
 @app.route("/")
@@ -15,7 +17,7 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/profile/", methods=["GET", "POST"])
+@app.route("/profile/")
 @login_required
 def profile():
     return render_template("profile.html")
@@ -34,13 +36,10 @@ def login():
         )
 
         if user is None or not user.check_password(form.password.data):
-            flash("Неверное имя пользователя или пароль")
+            flash("Invalid username or password")
             return redirect(url_for("login"))
-        else:
-            flash("Секундочку, проверяю пароль...")
-            time.sleep(5)
-            login_user(user, remember=form.remember_me.data)
-            return redirect(url_for("index"))
+        login_user(user, remember=form.remember_me.data)
+        return redirect(url_for("index"))
     return render_template("login.html", title="Login", form=form)
 
 
@@ -68,55 +67,91 @@ def registration():
         return redirect("/")
     return render_template("register.html")
 
+
 # Сам сканнер
-@app.route("/profile/scan", methods=["POST", 'GET'])
+@app.route("/profile/scan", methods=["POST", "GET"])
 @login_required  # проверка на авторизацию
 def scan():
     # запуск сканера и ввод
     form = ScanForm()
-    
+
     try:
-        if request.method == "POST":
+        if form.validate_on_submit():
             scanner = run_service()
-            code = request.form.get("code", "").strip()
-            repo_url = request.form.get("repo", "").strip()
-            
-            global result
-            
+            code = form.code.data.strip() if form.code.data else ""
+            repo_url = form.repo_url.data.strip() if form.repo_url.data else ""
+            uploaded_file = form.file.data
+            temp_file_path = None
+
+            if uploaded_file and uploaded_file.filename:
+                if uploaded_file.filename.strip() == "":
+                    flash("Имя файла не должно быть пустым")
+                    return render_template("scan.html", form=form)
+
+                # проверка размера файла
+                uploaded_file.seek(0, 2)
+                file_size = uploaded_file.tell()
+                uploaded_file.seek(0)
+
+                if file_size == 0:
+                    flash("Файл не должен быть пустым")
+                    return render_template("scan.html", form=form)
+                elif file_size > 20 * 1024 * 1024:  # 20 MB (подсчет в байтах)
+                    flash("Файл не должен превышать 20 МБ")
+                    return render_template("scan.html", form=form)
+
+                file_ext = os.path.splitext(uploaded_file.filename)[1]
+                if uploaded_file.filename.lower() == "dockerfile":
+                    suffix = ""
+                else:
+                    suffix = file_ext
+
+                # сохранение временного файла
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=suffix
+                ) as tmp_file:
+                    uploaded_file.save(tmp_file.name)
+                    temp_file_path = tmp_file.name
+                try:
+                    # сканирование
+                    result = scanner.run_file_scan(temp_file_path)
+                finally:
+                    # удаление в конце
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
             # проверка входных данных
-            if code:
+            elif code:
                 result = scanner.run_code_scan(code)
             elif repo_url:
                 result = scanner.run_repo_scan(repo_url)
             else:
-                flash("Укажите код или URL репозитория на GitHub")
-                return render_template('scan.html', form=form)
-            
+                flash("Вставьте код, URL репозиторий на GitHub или загрузите файл")
+                return render_template("scan.html", form=form)
+
             # проверка наличия результата
             if not result or not isinstance(result, dict):
                 flash("Результаты отсутствуют.")
-                return render_template('scan.html', form=form)
-            
-            return redirect(url_for("results"))
-            
+                return render_template("scan.html", form=form)
 
+            return render_template("results.html", result=result)
 
     # проверка ошибки, перенаправляет обратно на скан
     except ValueError as e:
         flash(f"Ошибка конфигурации: {str(e)}")
-        return render_template('scan.html', form=form)
+        return render_template("scan.html", form=form)
     except RuntimeError as e:
         flash(f"Ошибка сканирования: {str(e)}")
-        return render_template('scan.html', form=form)
+        return render_template("scan.html", form=form)
     except Exception as e:
         flash(f"Ошибка: {str(e)}")
-        return render_template('scan.html', form=form)
-    return render_template('scan.html', form=form)
+        return render_template("scan.html", form=form)
+    return render_template("scan.html", form=form)
+
 
 # Результаты скана
 @app.route("/profile/results", methods=["POST"])
 def results():
-    return render_template("results.html", result=result)
+    return "Results page"
 
 
 @app.route("/profile/logout")
