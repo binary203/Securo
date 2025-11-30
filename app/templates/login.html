@@ -4,8 +4,7 @@
 {% endblock %}
 
 {% block body %}
-<div class="text">
-  <div class="sign_in">
+  <div class="container">
     <h1>WHO AM I?</h1>
     {% for message in get_flashed_messages() %}
         <p style="color:red;text-align:center">{{ message }}</p>
@@ -33,6 +32,4 @@
     </form>
     <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
   </div>
-
-</div>
 {% endblock %}

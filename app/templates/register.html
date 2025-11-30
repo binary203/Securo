@@ -4,21 +4,24 @@
 {% endblock %}
 
 {% block body %}
-<div class="text">
-    <div class="sign_in">
-        <h1>REGISTRATION</h1>
-        <form method="GET" action="{{ url_for('login') }}">
-            <div class="text">
-                <label for="username">USERNAME: </label><br>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="text">
-                <label for="password">PASSWORD:</label><br>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <br>
-            <button type="submit">Зарегистрироваться</button>  
+    <div class="container">
+        <h1>Hello Friend</h1>
+        <form action="" method="post" novalidate>
+            {{ form.hidden_tag() }}
+        <div>
+            {{ form.username.label }}<br>
+            {{ form.username(size=32) }}
+        </div>
+        <br>
+        <div>
+            {{ form.password.label }}<br>
+            {{ form.password(size=32) }}
+        </div>
+        <br>
+        <div>
+            {{ form.submit() }}
+        </div>
+        <br>
         </form>
     </div>
-</div>
 {% endblock %}
