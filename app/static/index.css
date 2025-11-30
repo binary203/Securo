@@ -3,6 +3,9 @@ body {
     font-family: monospace;
     background-color: black;
     align-items: center;
+    color: white;
+    font-size: medium;
+    text-align: center;
 }
 
 h1 {
@@ -10,36 +13,12 @@ h1 {
     font-size:xx-large;
 }
 
-.text {
-    color: white;
-    font-size: medium;
-    font-family: monospace;
-    text-align: center;
-}
-
-.welcome {
+.container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     background-color: rgb(0, 0, 0);
-    flex-direction: column;
-}
-
-.sign_in {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: rgb(0, 0, 0);
-    flex-direction: column;
-}
-
-.scan {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
     flex-direction: column;
 }
 
@@ -52,7 +31,7 @@ input[type="password"] {
     font-family: sans-serif;
 }
 
-button {
+input[type="submit"] {
     background-color: white;
     color: rgb(0, 0, 0);
     padding: 0.45rem 1.5rem;
@@ -68,13 +47,13 @@ h1 {
     margin-top: 1.5rem;
 }
 
-.results {
-    color: red;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    background-color: grey;
-    width: 50%;
-    height: 100vh;
+button {
+    background-color: white;
+    color: rgb(0, 0, 0);
+    padding: 0.45rem 1.5rem;
+    border-radius: 10px;
+    font-family: monospace;
+    font-size: large;
+    cursor: pointer;
+    border: none;
 }

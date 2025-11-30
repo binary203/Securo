@@ -12,6 +12,10 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField("Запомнить меня")
     submit = SubmitField("Войти")
 
+class RegistrationForm(FlaskForm):
+    username = StringField("Имя", validators=[DataRequired()])
+    password = PasswordField("Пароль", validators=[DataRequired()])
+    submit = SubmitField("Зарегистрироваться")
 
 class ScanForm(FlaskForm):
     code = TextAreaField("Code", validators=[Optional(), Length(max=10000)])

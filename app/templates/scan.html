@@ -4,25 +4,21 @@
 {% endblock %}
 
 {% block body %}
-<div class="text">
-        <div class="scan">
-            <h1>SCAN</h1>
-            {% for message in get_flashed_messages() %}
-                <p style="color:red;text-align:center">{{ message }}</p>
-            {% endfor %}
-            <form method="post", action="{{ url_for('scan') }}">
-                {{ form.hidden_tag() }}
-
-                <label for="code">CODE: </label><br>
-                <textarea name="code" id="code" rows="10" cols="50" placeholder="Вставьте ваш код сюда..."></textarea>
-                <br>
-                <h2>OR</h2>
-                <br>
-                <label for="repo">REPO</label><br>
-                <input type="text", id="repo", name="repo">
-                <br>
-                <button type="submit">Отправить</button>
-            </form>
+    <div class="container">
+        <div>
+            {{ form.code.label }}<br>
+            {{ form.code }}
         </div>
+        <p><h2>OR</h2></p>
+        <div>
+            {{ form.repo_url.label }}<br>
+            {{ form.repo_url(size=42) }}
+        </div>
+        <p><h2>OR</h2></p>
+    <!--Тут должен быть D&D-->
+        <div>
+            {{ form.submit }}
+        </div>
+    </div>
 </div>
 {% endblock %}

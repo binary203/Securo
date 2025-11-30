@@ -1,22 +1,21 @@
-# Файл для всех роутов
 # Импорты
 from app import app, db
 from flask import render_template, request, redirect, url_for, session, flash
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User
 import sqlalchemy as sql
-from .forms import LoginForm, ScanForm
+from .forms import LoginForm, ScanForm, RegistrationForm
 from .services import run_service
 import tempfile
 import os
+import sqlalchemy
 
-
-# Базовая страница
+# Индекс страница
 @app.route("/")
 def index():
     return render_template("index.html")
 
-
+# Профиль
 @app.route("/profile/")
 @login_required
 def profile():
@@ -42,31 +41,25 @@ def login():
         return redirect(url_for("index"))
     return render_template("login.html", title="Login", form=form)
 
-
+# Регистрация
 @app.route("/registration", methods=["GET", "POST"])
 def registration():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            flash("Пользователь с таким именем уже существует!")
+    form = RegistrationForm()
+    
+    if form.validate_on_submit():
+        if User.query.filter_by(username=form.username.data).first():
             return redirect(url_for("registration"))
-
-        new_user = User(username=username)
-        new_user.set_password(password)
-
-        # Сохраняем в БД
+        
+        new_user = User(username=form.username.data)
+        new_user.set_password(password=form.password.data)
+            
         db.session.add(new_user)
         db.session.commit()
-
-        # Автоматически логиним пользователя
+            
         login_user(new_user)
-        flash("Регистрация успешна!")
         return redirect("/")
-    return render_template("register.html")
-
+        
+    return render_template("register.html", form=form)
 
 # Сам сканнер
 @app.route("/profile/scan", methods=["POST", "GET"])
@@ -153,7 +146,7 @@ def scan():
 def results():
     return "Results page"
 
-
+# Выход
 @app.route("/profile/logout")
 @login_required
 def logout():
