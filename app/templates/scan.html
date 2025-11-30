@@ -13,7 +13,8 @@
     <form method="post" action="{{ url_for('scan') }}" enctype="multipart/form-data" id= "scanForm">
         {{ form.hidden_tag() }}
         <label for="code">Code</label>
-        {{ form.code(id='code', rows=10, cols=50, placeholder='Вставьте ваш код сюда') }}<br>
+        <br>
+        {{ form.code(id='code', rows=10, cols=50, placeholder='Вставьте ваш код сюда') }}
         {% if form.code.errors %}
         <ul class="errors">
             {% for error in form.code.errors %}
@@ -24,8 +25,9 @@
         <p>
         <h2>OR</h2>
         </p>
-        <label for="repo_url">Repository</label><br>
-        {{ form.repo_url(id='repo') }}<br>
+        <label for="repo_url">Repository</label>
+        <br>
+        {{ form.repo_url(id='repo', placeholder='Вставьте ссылку на репозиторий сюда') }}<br>
         {% if form.repo_url.errors %}
         <ul calss="errors">
             {% for error in form.repo.errors %}
@@ -36,7 +38,8 @@
         <p>
         <h2>OR</h2>
         </p>
-        <label for="file">Upload File</label><br>
+        <label for="file">Upload File</label>
+        <br>
         <div class="file-upload-container">
             <div class="file-drop-zone" , id="fileDropZone">
                 {{ form.file(id="fileInput",
