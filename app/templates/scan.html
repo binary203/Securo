@@ -26,7 +26,7 @@
         </p>
         <label for="repo_url">Repository</label><br>
         {{ form.repo_url(id='repo') }}<br>
-        {% if form.repo.errors %}
+        {% if form.repo_url.errors %}
         <ul calss="errors">
             {% for error in form.repo.errors %}
             <li style="color:rgb(175, 5, 5)">{{ error }}</li>
