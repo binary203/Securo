@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block body %}
+<div class="text">
+    <div class="results-container">
+        <h1>РЕЗУЛЬТАТЫ</h1>
+        
+        {% if result %}
+            {% if result.error %}
+            <div class="error-message">
+                <strong>Ошибка сканирования:</strong> {{ result.error }}
+            </div>
+            {% else %}
+                {% if result.results or result.errors %}
+                    {% set findings = result.results or [] %}
+                    {% set errors = result.errors or [] %}
+                    
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card {% if findings|length > 0 %}danger{% else %}success{% endif %}">
+                            <div class="stat-label">Уязвимостей</div>
+                            <div class="stat-value">{{ findings|length }}</div>
+                        </div>
+                        <div class="stat-card {% if errors|length > 0 %}danger{% endif %}">
+                            <div class="stat-label">Ошибок</div>
+                            <div class="stat-value">{{ errors|length }}</div>
+                        </div>
+                    </div>
+                    
+                    {% if findings|length > 0 %}
+                    <div class="result-section">
+                        <h2>Найденные уязвимости</h2>
+                        
+                        {% for finding in findings %}
+                        <div class="vulnerability-card">
+                            <div class="vulnerability-header">
+                                <span class="vulnerability-title">
+                                    {% if finding.check_id %}
+                                        {{ finding.check_id }}
+                                    {% elif finding.rule_id %}
+                                        {{ finding.rule_id }}
+                                    {% else %}
+                                        Уязвимость #{{ loop.index }}
+                                    {% endif %}
+                                </span>
+                                
+                                {% if finding.extra and finding.extra.severity %}
+                                <span class="severity-badge {{ finding.extra.severity|lower }}">
+                                    {{ finding.extra.severity }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if finding.path %}
+                            <div class="vulnerability-meta">
+                                <strong>Файл:</strong> {{ finding.path }}
+                                {% if finding.start and finding.start.line %}
+                                    (строка {{ finding.start.line }}{% if finding.end and finding.end.line %} - {{ finding.end.line }}{% endif %})
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if finding.message %}
+                            <div class="vulnerability-description">
+                                <strong>Описание:</strong> {{ finding.message }}
+                            </div>
+                            {% elif finding.extra and finding.extra.message %}
+                            <div class="vulnerability-description">
+                                <strong>Описание:</strong> {{ finding.extra.message }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if finding.extra and finding.extra.lines %}
+                            <pre>{{ finding.extra.lines }}</pre>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="success-message">
+                        <strong>✓ Уязвимости не найдены</strong>
+                        <p>Ваш код прошел проверку безопасности.</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if errors|length > 0 %}
+                    <div class="result-section">
+                        <h2>Ошибки сканирования ({{ errors|length }})</h2>
+                        {% for error in errors %}
+                        <div class="error-message">
+                            <strong>Ошибка:</strong> {{ error.message or error }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                {% else %}
+                <div class="result-section">
+                    <h2>Сырые Результаты</h2>
+                    <pre>{{ result | tojson(indent=2) }}</pre>
+                </div>
+                {% endif %}
+            {% endif %}
+        {% else %}
+        <div class="error-message">
+            Результаты сканирования не получены. Результатов нет.
+        </div>
+        {% endif %}
+        
+        <a href="{{ url_for('scan') }}" class="back-button">← Новое сканирование</a>
+    </div>
+</div>
+{% endblock %}
