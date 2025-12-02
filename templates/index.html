@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>WELCOME</h1>
+    <p style="color: #888; margin-bottom: 2rem; letter-spacing: 0.1em;">Secure code analysis platform</p>
+    <form action="{{ url_for('login') }}" method="GET">
+        <button type="submit">Войти</button>
+    </form>
+</div>
+{% endblock %}

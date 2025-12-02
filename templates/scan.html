@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% endblock %}
+
+{% block body %}
+<div class="container" style="padding: 2rem;">
+    <h1>SECURO SCANNER</h1>
+    
+    {% for message in get_flashed_messages() %}
+    <div class="flash-message error">{{ message }}</div>
+    {% endfor %}
+    
+    <form method="post" action="{{ url_for('scan') }}" enctype="multipart/form-data" id="scanForm" style="max-width: 500px;">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.code.label }}
+            {{ form.code(id='code', rows=10, cols=50, placeholder='Вставьте ваш код сюда') }}
+            {% if form.code.errors %}
+            <ul class="errors">
+                {% for error in form.code.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        
+        <div class="divider">
+            <span>OR</span>
+        </div>
+        
+        <div class="form-group">
+            {{ form.repo_url.label }}
+            {{ form.repo_url(id='repo', placeholder='https://github.com/user/repo', size=31) }}
+            {% if form.repo_url.errors %}
+            <ul class="errors">
+                {% for error in form.repo_url.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        
+        <div class="divider">
+            <span>OR</span>
+        </div>
+        
+        <div class="form-group">
+            {{ form.file.label }}
+            <div class="file-upload-container">
+                <div class="file-drop-zone" id="fileDropZone">
+                    <div class="drop-zone-content" id="dropZoneContent">
+                        <p>Перетащите файл сюда</p>
+                        <p>или нажмите для выбора</p>
+                        {{ form.file(id="fileInput", accept=".py,.js,.ts,.java,.c,.cpp,.go,.rb,.php,.cs,.scala,.kt,.rs,.swift,.lua,.ml,.tf,.yaml,.json,.html,.sh,.cls,.clj,.dart,.ex,.jsx,.jl,.jsonnet,.lisp,.r,.scm,.sol,.tsx,.xml,Dockerfile") }}
+                    </div>
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <span id="fileName"></span>
+                        <button type="button" class="file-remove-btn" id="fileRemoveBtn">✕</button>
+                    </div>
+                </div>
+            </div>
+            {% if form.file.errors %}
+            <ul class="errors">
+                {% for error in form.file.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        
+        <div class="form-group" style="margin-top: 2rem;">
+            {{ form.submit(method='post') }}
+        </div>
+    </form>
+    
+    <a href="{{ url_for('profile') }}" class="back-button">← Назад</a>
+</div>
+
+<script src="{{ url_for('static', filename='scan.js') }}"></script>
+{% endblock %}
