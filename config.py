@@ -14,4 +14,4 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     DEBUG: bool = True
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///default.db'
-    SEMGREP_API_TOKEN='55777e2bb1b30a17337f689e2f2e7b9601aaf84a09e5148b1190e9df0d9b31c3'
+    SEMGREP_API_TOKEN=''
