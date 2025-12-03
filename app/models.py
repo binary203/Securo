@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import app, db, login_manager
 
-# юзеры для авторизации, если отменяем ее то делитнуть
+# юзеры для авторизации
 class User(db.Model, UserMixin): 
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
