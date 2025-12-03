@@ -5,6 +5,7 @@ import os
 import json
 import shutil
 import re
+import sys
 
 
 class SemgrepCLIService:
@@ -54,24 +55,81 @@ class SemgrepCLIService:
     _BLOCK_COMM_PATTERN = re.compile(r"/\*.*?\*/", re.DOTALL)
     _LINE_COMM_PATTERN = re.compile(r"(?m)//.*?$")
 
+    _semgrep_path = None
+
+    @classmethod
+    def reset_semgrep_cache(cls):
+        cls._semgrep_path = None
+
+    @classmethod
+    def _find_semgrep(cls):
+        if cls._semgrep_path is not None and cls._semgrep_path != "":
+            return cls._semgrep_path
+
+        if cls._semgrep_path == "":
+            return None
+
+        possible_paths = []
+
+        path = shutil.which("semgrep")
+        if path:
+            possible_paths.append(path)
+
+        if hasattr(sys, "prefix") and sys.prefix != sys.base_prefix:
+            if os.name == "nt":  # Windows
+                venv_semgrep = os.path.join(sys.prefix, "Scripts", "semgrep.exe")
+            else: # Linux
+                venv_semgrep = os.path.join(sys.prefix, "bin", "semgrep")
+
+            if os.path.exists(venv_semgrep):
+                possible_paths.append(venv_semgrep)
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "semgrep", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
+                return cls._semgrep_path
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
+        for path in possible_paths:
+            try:
+                result = subprocess.run(
+                    [path, "--version"], capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    cls._semgrep_path = path
+                    return cls._semgrep_path
+            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+                continue
+
+        cls._semgrep_path = ""
+        return None
+
     def __init__(self, ruleset="p/ci"):
         self.ruleset = ruleset
-        # проверка наличия semgrep
-        try:
-            subprocess.run(
-                ["semgrep", "--version"], capture_output=True, text=True, timeout=5
-            )
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        semgrep_cmd = self._find_semgrep()
+        if semgrep_cmd is None:
             raise RuntimeError("semgrep CLI не найден.")
 
-    # удаление комментариев
+        if isinstance(semgrep_cmd, list):
+            self._semgrep_cmd = semgrep_cmd
+        else:
+            self._semgrep_cmd = [semgrep_cmd]
+
+    # удаление комментарие и строк
     def _code_cleaner(self, code: str) -> str:
         cleaned = self._STR_PATTERN.sub(" ", code)
         cleaned = self._BLOCK_COMM_PATTERN.sub(" ", cleaned)
         cleaned = self._LINE_COMM_PATTERN.sub(" ", cleaned)
         return cleaned.lower()
-        # удаление скрытых символов
 
+     # удаление скрытых символов
     def _code_normalizer(self, code: str) -> str:
         if code.startswith("\ufeff"):
             code = code[1:]
@@ -440,8 +498,8 @@ class SemgrepCLIService:
                 f.write(normalized_code)
 
             result = subprocess.run(
-                [
-                    "semgrep",
+                self._semgrep_cmd
+                + [
                     "--config",
                     self.ruleset,
                     "-q",
@@ -476,7 +534,7 @@ class SemgrepCLIService:
 
     # внутренний метод сканирования репозитория
     def _run_repo_scan(self, repo_url: str) -> dict:
-        if not repo_url.startswith(("https://github.com/")):
+        if not repo_url.startswith(("https://github.com/")) or not repo_url.startswith(("https://gitlab.com/")):
             raise ValueError("Поддерживаются только репозитории GitHub")
 
         git_path = shutil.which("git")
@@ -499,8 +557,8 @@ class SemgrepCLIService:
                 )
 
             scan = subprocess.run(
-                [
-                    "semgrep",
+                self._semgrep_cmd
+                + [
                     "--config",
                     self.ruleset,
                     "-q",
@@ -554,8 +612,8 @@ class SemgrepCLIService:
                 raise RuntimeError(f"Не удалось определить язык: {str(e)}")
 
         file_scan = subprocess.run(
-            [
-                "semgrep",
+            self._semgrep_cmd
+            + [
                 "--config",
                 self.ruleset,
                 "-q",
