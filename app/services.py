@@ -534,7 +534,7 @@ class SemgrepCLIService:
 
     # внутренний метод сканирования репозитория
     def _run_repo_scan(self, repo_url: str) -> dict:
-        if not repo_url.startswith(("https://github.com/")) or not repo_url.startswith(("https://gitlab.com/")):
+        if not repo_url.startswith(("https://github.com/")) and not repo_url.startswith(("https://gitlab.com/")):
             raise ValueError("Поддерживаются только репозитории GitHub")
 
         git_path = shutil.which("git")
