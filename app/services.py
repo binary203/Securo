@@ -1,4 +1,6 @@
 from .models import db, Scans, Vulnerability, User
+from openai import OpenAI
+from dotenv import load_dotenv
 import subprocess
 import tempfile
 import os
@@ -6,6 +8,92 @@ import json
 import shutil
 import re
 import sys
+
+load_dotenv()
+
+LLM_client = OpenAI(
+    base_url="https://router.huggingface.co/v1",
+    api_key=os.getenv("HF_TOKEN"),
+)
+
+
+def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
+    if not AI_lang:
+        AI_lang = "ru"
+    if code_snippet is None:
+        code_snippet = ""
+    system_prompt = """
+    You are highly skilled in cybersecurity, secure coding, vulnerability analysis, code quality, refactoring, and debugging. 
+    Your responsibilities include:
+    detecting vulnerabilities, bugs, and logical errors;
+
+    explaining security issues clearly and professionally;
+
+    fixing and rewriting insecure code;
+
+    improving code quality, performance, and maintainability;
+
+    generating safe, production-ready code.
+
+    Always provide precise, practical, technically accurate explanations and improvements.
+    Follow secure coding best practices (OWASP, CERT, SEI, CWE).
+    When showing fixed code, return the full corrected snippet.
+"""
+    if user_command == "/explain" and AI_lang == "ru":
+        task = """
+        Объясни уязвимости, баги или логические ошибки в данном коде. Опиши:
+
+        в чём заключается проблема;
+
+        почему она опасна или приводит к сбоям;
+
+        как её могут эксплуатировать либо к чему она приведёт;
+
+        как правильно её исправить (концептуально).
+
+        Дай подробное и понятное объяснение.
+"""
+
+    elif user_command == "/explain" and AI_lang == "eng":
+        task = """
+        Explain the vulnerabilities, bugs, or logical issues in the provided code. Describe:
+
+        what the issue is;
+
+        why it is a problem;
+
+        how it can be exploited or cause failures;
+
+        how it should be fixed (conceptually).
+
+        Be clear and detailed.
+"""
+
+    elif user_command == "/fix" and AI_lang == "ru":
+        task = """Fix all vulnerabilities, bugs, and logical errors in the code. Return a fully corrected and secure version of the code. Follow secure coding best practices and ensure the final code is production-ready."""
+    elif user_command == "/fix" and AI_lang == "eng":
+        task = """Исправь все уязвимости, баги и логические ошибки в коде. Верни полностью исправленную и безопасную версию кода. Соблюдай лучшие практики безопасного кодинга и делай код готовым к продакшену."""
+    elif user_command == "/improve" and AI_lang == "ru":
+        task = """Refactor and improve the code. Make it cleaner, faster, safer, and more maintainable. Enhance readability, structure, performance, and follow best engineering practices."""
+    elif user_command == "/improve" and AI_lang == "eng":
+        task = """Отрефактори и улучшай код. Сделай его чище, безопаснее, быстрее и удобнее для поддержки. Улучшай читаемость, структуру, производительность и соблюдай лучшие практики разработки."""
+    else:
+        task = "Answer the user’s question or fulfill the request normally on his language."
+
+    prompt = f"""Task: {task}.\n{code_snippet}"""
+
+    try:
+        completion = LLM_client.chat.completions.create(
+            model="Qwen/Qwen2.5-Coder-7B-Instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            timeout=60,
+        )
+        return completion.choices[0].message["content"]
+    except Exception as e:
+        raise RuntimeError(f"Ошибка вызова LLM: {str(e)}")
 
 
 class SemgrepCLIService:
@@ -78,7 +166,7 @@ class SemgrepCLIService:
         if hasattr(sys, "prefix") and sys.prefix != sys.base_prefix:
             if os.name == "nt":  # Windows
                 venv_semgrep = os.path.join(sys.prefix, "Scripts", "semgrep.exe")
-            else: # Linux
+            else:  # Linux
                 venv_semgrep = os.path.join(sys.prefix, "bin", "semgrep")
 
             if os.path.exists(venv_semgrep):
@@ -129,7 +217,7 @@ class SemgrepCLIService:
         cleaned = self._LINE_COMM_PATTERN.sub(" ", cleaned)
         return cleaned.lower()
 
-     # удаление скрытых символов
+    # удаление скрытых символов
     def _code_normalizer(self, code: str) -> str:
         if code.startswith("\ufeff"):
             code = code[1:]
@@ -140,6 +228,7 @@ class SemgrepCLIService:
         # BOM
         code = code.replace("\ufeff", "")
         # нормализация переносов строк
+        code = code.replace("\u202a", "")
         code = code.replace("\r\n", "\n").replace("\r", "\n")
         return code
 
@@ -484,7 +573,7 @@ class SemgrepCLIService:
         current_language = self._detect_language(code)
         ext = self.Language.get(current_language, ".py")
 
-        # нормализация код перед записью
+        # нормализация кода перед записью
         normalized_code = self._code_normalizer(code)
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -534,7 +623,9 @@ class SemgrepCLIService:
 
     # внутренний метод сканирования репозитория
     def _run_repo_scan(self, repo_url: str) -> dict:
-        if not repo_url.startswith(("https://github.com/")) and not repo_url.startswith(("https://gitlab.com/")):
+        if not repo_url.startswith(("https://github.com/")) and not repo_url.startswith(
+            ("https://gitlab.com/")
+        ):
             raise ValueError("Поддерживаются только репозитории GitHub")
 
         git_path = shutil.which("git")
@@ -570,11 +661,16 @@ class SemgrepCLIService:
                 capture_output=True,
                 text=True,
                 timeout=300,
+                encoding="utf-8",
+                errors="replace",
             )
 
             if scan.returncode != 0:
-                raise RuntimeError(f"Ошибка сканирования: {scan.stderr or scan.stdout}")
-
+                print("STDERR:", scan.stderr)
+                print("STDOUT:", scan.stdout)
+                raise RuntimeError(
+                    f"Ошибка сканирования (код {scan.returncode}): {scan.stderr or scan.stdout}"
+                )
             try:
                 return json.loads(scan.stdout)
             except json.JSONDecodeError:

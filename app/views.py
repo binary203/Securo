@@ -1,19 +1,20 @@
 # Импорты
 from app import app, db
-from flask import render_template, request, redirect, url_for, session, flash
+from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User
 import sqlalchemy as sql
 from .forms import LoginForm, ScanForm, RegistrationForm
-from .services import run_service
+from .services import run_service, run_LLM
 import tempfile
 import os
-import sqlalchemy
+
 
 # Индекс страница
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 # Профиль
 @app.route("/profile/")
@@ -41,25 +42,27 @@ def login():
         return redirect(url_for("index"))
     return render_template("login.html", title="Login", form=form)
 
+
 # Регистрация
 @app.route("/registration", methods=["GET", "POST"])
 def registration():
     form = RegistrationForm()
-    
+
     if form.validate_on_submit():
         if User.query.filter_by(username=form.username.data).first():
             return redirect(url_for("registration"))
-        
+
         new_user = User(username=form.username.data)
         new_user.set_password(password=form.password.data)
-            
+
         db.session.add(new_user)
         db.session.commit()
-            
+
         login_user(new_user)
         return redirect("/")
-        
+
     return render_template("register.html", form=form)
+
 
 # Сам сканнер
 @app.route("/profile/scan", methods=["POST", "GET"])
@@ -141,10 +144,30 @@ def scan():
     return render_template("scan.html", form=form)
 
 
+@app.route("/api/ai", methods=["POST"])
+@login_required
+def AI():
+    try:
+        data = request.json
+        user_command = data.get("user_command")
+        AI_lang = data.get("AI_lang", "ru")
+        code_snippet = data.get("code_snippet", "")
+
+        if not user_command:
+            return jsonify({"error": "Требуется команда."}), 400
+
+        response = run_LLM(user_command, AI_lang, code_snippet)
+        return jsonify({"reply": response})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # Результаты скана
 @app.route("/profile/results", methods=["POST"])
 def results():
     return "Results page"
+
 
 # Выход
 @app.route("/profile/logout")
