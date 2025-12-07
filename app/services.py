@@ -18,10 +18,23 @@ LLM_client = OpenAI(
 
 
 def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
+    MAX_CODE_LENGTH = 10000
+
+    # Валидация входных данных
+    if not user_command:
+        raise ValueError("запрос не может быть пустым")
+
+    if len(user_command) > MAX_CODE_LENGTH:
+        raise ValueError(f"Запрос слишком длинный. Максимум {MAX_CODE_LENGTH} символов")
+
     if not AI_lang:
         AI_lang = "ru"
+
     if code_snippet is None:
         code_snippet = ""
+    elif len(code_snippet) > MAX_CODE_LENGTH:
+        raise ValueError(f"Запрос слишком длинный. Максимум {MAX_CODE_LENGTH} символов")
+
     system_prompt = """
     You are highly skilled in cybersecurity, secure coding, vulnerability analysis, code quality, refactoring, and debugging. 
     Your responsibilities include:
@@ -70,17 +83,19 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
 """
 
     elif user_command == "/fix" and AI_lang == "ru":
-        task = """Fix all vulnerabilities, bugs, and logical errors in the code. Return a fully corrected and secure version of the code. Follow secure coding best practices and ensure the final code is production-ready."""
-    elif user_command == "/fix" and AI_lang == "eng":
         task = """Исправь все уязвимости, баги и логические ошибки в коде. Верни полностью исправленную и безопасную версию кода. Соблюдай лучшие практики безопасного кодинга и делай код готовым к продакшену."""
-    elif user_command == "/improve" and AI_lang == "ru":
-        task = """Refactor and improve the code. Make it cleaner, faster, safer, and more maintainable. Enhance readability, structure, performance, and follow best engineering practices."""
-    elif user_command == "/improve" and AI_lang == "eng":
-        task = """Отрефактори и улучшай код. Сделай его чище, безопаснее, быстрее и удобнее для поддержки. Улучшай читаемость, структуру, производительность и соблюдай лучшие практики разработки."""
-    else:
-        task = "Answer the user’s question or fulfill the request normally on his language."
+    elif user_command == "/fix" and AI_lang == "eng":
+        task = """Fix all vulnerabilities, bugs, and logical errors in the code. Return a fully corrected and secure version of the code. Follow secure coding best practices and ensure the final code is production-ready."""
 
-    prompt = f"""Task: {task}.\n{code_snippet}"""
+    elif user_command == "/improve" and AI_lang == "ru":
+        task = """Отрефактори и улучшай код. Сделай его чище, безопаснее, быстрее и удобнее для поддержки. Улучшай читаемость, структуру, производительность и соблюдай лучшие практики разработки."""
+    elif user_command == "/improve" and AI_lang == "eng":
+        task = """Refactor and improve the code. Make it cleaner, faster, safer, and more maintainable. Enhance readability, structure, performance, and follow best engineering practices."""
+
+    else:
+        task = f"Answer the user's question or fulfill the request: {user_command}"
+
+    prompt = f"""Task: {task}. Code:\n{code_snippet}"""
 
     try:
         completion = LLM_client.chat.completions.create(
@@ -89,11 +104,18 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
-            timeout=60,
+            timeout=120,
         )
-        return completion.choices[0].message["content"]
+
+        return completion.choices[0].message.content
+
     except Exception as e:
-        raise RuntimeError(f"Ошибка вызова LLM: {str(e)}")
+        if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+            raise RuntimeError("Превышено время ожидания ответа от LLM (120 секунд).")
+        elif "rate limit" in str(e).lower():
+            raise RuntimeError("Превышен лимит запросов к LLM API. Попробуйте позже.")
+        else:
+            raise RuntimeError(f"Ошибка вызова LLM: {str(e)}")
 
 
 class SemgrepCLIService:

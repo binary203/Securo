@@ -1,6 +1,6 @@
 # Импорты
 from app import app, db
-from flask import render_template, request, redirect, url_for, session, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User
 import sqlalchemy as sql
@@ -50,7 +50,7 @@ def registration():
 
     if form.validate_on_submit():
         if User.query.filter_by(username=form.username.data).first():
-            return redirect(url_for("registration"))
+            return render_template(url_for("registration"))
 
         new_user = User(username=form.username.data)
         new_user.set_password(password=form.password.data)
@@ -154,13 +154,17 @@ def AI():
         code_snippet = data.get("code_snippet", "")
 
         if not user_command:
-            return jsonify({"error": "Требуется команда."}), 400
+            return jsonify({"error": "Требуется команда или запрос."}), 400
 
         response = run_LLM(user_command, AI_lang, code_snippet)
         return jsonify({"reply": response})
 
-    except Exception as e:
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except RuntimeError as e:
         return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": f"Внутренняя ошибка сервера: {str(e)}"}), 500
 
 
 # Результаты скана
