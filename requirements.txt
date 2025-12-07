@@ -62,7 +62,6 @@ Pygments==2.19.2
 pytest==9.0.1
 python-dotenv==1.2.1
 python-multipart==0.0.20
-pywin32==311
 qrcode==8.2
 referencing==0.37.0
 requests==2.32.5
