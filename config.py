@@ -12,6 +12,6 @@ class BaseConfig:
     
 #! Конфиг для разработки, делитнуть на релизе!
 class DevelopmentConfig(BaseConfig):
-    DEBUG: bool = True
+    DEBUG: bool = False
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///default.db'
     SEMGREP_API_TOKEN=''
