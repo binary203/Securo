@@ -104,11 +104,9 @@
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
         
-        {% if result and result.results and result.results|length > 0 %}
         <div style="margin-bottom: 2rem;">
             <button id="AiAssist">🤖 ИИ-помощник</button>
         </div>
-        {% endif %}
 
         {% if result %}
             {% if result.error %}
