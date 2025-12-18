@@ -50,9 +50,31 @@
     color: var(--text-primary);
 }
 
+.popup__content p {
+    margin-bottom: 1.5rem;
+}
+
 .popup__content button {
     margin-right: 1rem;
     margin-top: 1rem;
+}
+
+.ai-action-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+}
+
+.ai-action-btn:hover {
+    border-color: var(--text-primary);
+    background: var(--bg-card);
 }
 
 #AiAssist {
@@ -82,9 +104,11 @@
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
         
+        {% if result and result.results and result.results|length > 0 %}
         <div style="margin-bottom: 2rem;">
             <button id="AiAssist">🤖 ИИ-помощник</button>
         </div>
+        {% endif %}
 
         {% if result %}
             {% if result.error %}
@@ -199,8 +223,18 @@
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                 Выберите действие для работы с найденными уязвимостями
             </p>
-            <button id="sendToAI">Отправить на анализ</button>
-            <button id="close" class="btn-outline">Закрыть</button>
+            <button id="explainBtn" class="ai-action-btn">
+                📖 Объяснить уязвимости
+            </button>
+            <button id="fixBtn" class="ai-action-btn">
+                🔧 Предложить исправления
+            </button>
+            <button id="improveBtn" class="ai-action-btn">
+                ⚡ Улучшить код
+            </button>
+            <div style="margin-top: 1.5rem;">
+                <button id="close" class="btn-outline">Закрыть</button>
+            </div>
         </div>
     </div>
 </div>
