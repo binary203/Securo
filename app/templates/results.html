@@ -1,103 +1,209 @@
 {% extends "base.html" %}
 
 {% block head %}
+<style>
 
+#overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+#overlay.show {
+    display: block;
+    opacity: 1;
+}
+
+/* popup стили */
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+    min-width: 400px;
+    max-width: 90%;
+    z-index: 10000;
+    display: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+.popup.show {
+    display: block;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.popup__content h2 {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.popup__content button {
+    margin-right: 1rem;
+    margin-top: 1rem;
+}
+
+#AiAssist {
+    background: var(--accent-green);
+    color: var(--bg-primary);
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.875rem;
+}
+
+#AiAssist:hover {
+    background: var(--accent-green-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0, 255, 65, 0.2);
+}
+</style>
 {% endblock %}
 
 {% block body %}
 <div class="text">
     <div class="results-container">
-        <h1>Результаты</h1>
+        <h1>РЕЗУЛЬТАТЫ</h1>
+        
+        <div style="margin-bottom: 2rem;">
+            <button id="AiAssist">🤖 ИИ-помощник</button>
+        </div>
+
         {% if result %}
             {% if result.error %}
-                <p style="color: rgb(255, 20, 20)"><strong>Ошибка сканирования:</strong>{{ result.error }}</p>
+            <div class="error-message">
+                <strong>Ошибка сканирования:</strong> {{ result.error }}
+            </div>
             {% else %}
                 {% if result.results or result.errors %}
                     {% set findings = result.results or [] %}
                     {% set errors = result.errors or [] %}
 
-                    <div>Найдено уязвимостей</div>
-                    <div>{{ findings|length }}</div>
-                    <div>Ошибок</div>
-                    <div>{{ errors|length }}</div>
-
-                    {% if findings|length > 0 %}
-                        <div>
-                            <h2>Найденные уязвимости</h2>
-                            {% for finding in findings %}
-                                {% if finding.check_id %}
-                                    {{ finding.check_id }}
-                                {% elif finding.rule_id %}
-                                    {{ finding.rule_id }}
-                                {% else %}
-                                    Уязвимость #{{ loop.index }}
-                                {% endif %}
-
-                                <!-- уровень уязвимости -->
-                                {% if finding.extra.severity %}
-                                    <span style="background: #e76363; color: white">{{ finding.extra.severity }}</span>
-                                {% endif %}
-
-                                {% if finding.path %}
-                                    <div>
-                                        Файл: {{ finding.path }}
-                                        {% if finding.start and finding.start.line %}
-                                            (строка {{ finding.start.line }}{% if finding.end and finding.end.line %} - {{ finding.end.line }}{% endif %})
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
-
-                                {% if finding.message %}
-                                    <div>
-                                        <strong>Описание:</strong> {{ finding.message }}
-                                    </div>
-                                {% elif finding.extra and finding.extra.message %}
-                                    <div>
-                                        <strong>Описание:</strong> {{ finding.extra.message }}
-                                    </div>
-                                {% endif %}
-
-                                <!-- фрагмент -->
-                                {% if finding.extra and finding.extra.lines %}
-                                    <div>
-                                        <pre>{{ finding.extra.lines }}</pre>
-                                    </div>
-                                {% endif %}
-
-                            {% endfor %}
+                    <div class="stats-grid">
+                        <div class="stat-card {% if findings|length > 0 %}danger{% else %}success{% endif %}">
+                            <div class="stat-label">Уязвимостей</div>
+                            <div class="stat-value">{{ findings|length }}</div>
                         </div>
-                    {% else %}
-                        <div class="success-message">
-                            <strong>Уязвимости не найдены</strong>
-                            Ваш код прошел проверку безопасности.
+                        <div class="stat-card {% if errors|length > 0 %}danger{% endif %}">
+                            <div class="stat-label">Ошибок</div>
+                            <div class="stat-value">{{ errors|length }}</div>
                         </div>
-                    {% endif %}
-
-                    {% if errors|length > 0 %}
-                        <div class="result-section">
-                            <h2>Ошибки сканирования {{ errors|length }}</h2>
-                            {% for error in errors %}
-                                <div class="error-message">
-                                    <strong>Ошибка:</strong> {{ error.message or error }}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-
-                {% else %}
-                    <div class="result-section">
-                        <h2>Сырые Результаты</h2>
-                        <pre>{{ result | tojson(indent=2) }}</pre>
                     </div>
+                    
+                    {% if findings|length > 0 %}
+                    <div class="result-section">
+                        <h2>Найденные уязвимости</h2>
+                        
+                        {% for finding in findings %}
+                        <div class="vulnerability-card">
+                            <div class="vulnerability-header">
+                                <span class="vulnerability-title">
+                                    {% if finding.check_id %}
+                                        {{ finding.check_id }}
+                                    {% elif finding.rule_id %}
+                                        {{ finding.rule_id }}
+                                    {% else %}
+                                        Уязвимость #{{ loop.index }}
+                                    {% endif %}
+                                </span>
+                                
+                                {% if finding.extra and finding.extra.severity %}
+                                <span class="severity-badge {{ finding.extra.severity|lower }}">
+                                    {{ finding.extra.severity }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if finding.path %}
+                            <div class="vulnerability-meta">
+                                <strong>Файл:</strong> {{ finding.path }}
+                                {% if finding.start and finding.start.line %}
+                                    (строка {{ finding.start.line }}{% if finding.end and finding.end.line %} - {{ finding.end.line }}{% endif %})
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if finding.message %}
+                            <div class="vulnerability-description">
+                                <strong>Описание:</strong> {{ finding.message }}
+                            </div>
+                            {% elif finding.extra and finding.extra.message %}
+                            <div class="vulnerability-description">
+                                <strong>Описание:</strong> {{ finding.extra.message }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if finding.extra and finding.extra.lines %}
+                            <pre>{{ finding.extra.lines }}</pre>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+     
+                    {% else %}
+                    <div class="success-message">
+                        <strong>✓ Уязвимости не найдены</strong>
+                        <p>Ваш код прошел проверку безопасности.</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if errors|length > 0 %}
+                    <div class="result-section">
+                        <h2>Ошибки сканирования ({{ errors|length }})</h2>
+                        {% for error in errors %}
+                        <div class="error-message">
+                            <strong>Ошибка:</strong> {{ error.message or error }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                {% else %}
+                <div class="result-section">
+                    <h2>Сырые Результаты</h2>
+                    <pre>{{ result | tojson(indent=2) }}</pre>
+                </div>
                 {% endif %}
             {% endif %}
         {% else %}
-            <div class="error-message">
-                Результаты сканирования не получены. Результатов нет.
-            </div>
+        <div class="error-message">
+            Результаты сканирования не получены. Результатов нет.
+        </div>
         {% endif %}
-
-        <a href="{{ url_for('scan') }}" class=back-button>← Назад</a>
+        
+        <a href="{{ url_for('scan') }}" class="back-button">← Новое сканирование</a>
     </div>
 </div>
+
+<div id="overlay">
+    <div id="popup" class="popup">
+        <div class="popup__content">
+            <h2>🤖 ИИ-помощник</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Выберите действие для работы с найденными уязвимостями
+            </p>
+            <button id="sendToAI">Отправить на анализ</button>
+            <button id="close" class="btn-outline">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='ai.js') }}"></script>
 {% endblock %}
