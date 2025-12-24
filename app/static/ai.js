@@ -1,160 +1,255 @@
-const aiButton = document.getElementById("AiAssist");
-const explainBtn = document.getElementById("explainBtn");
-const fixBtn = document.getElementById("fixBtn");
-const improveBtn = document.getElementById("improveBtn");
-const popup = document.getElementById("popup");
-const closeBtn = document.getElementById("close");
-const overlay = document.getElementById("overlay");
+// Статус чата
+let currentLanguage = 'ru';
+let attachedCode = null;
+let conversationHistory = [];
 
-// Открытие попапа
-aiButton.addEventListener("click", () => {
-    popup.classList.add("show");
-    overlay.classList.add("show");
+// Элементы интерфейса
+const overlay = document.getElementById('overlay');
+const chatContainer = document.getElementById('chatContainer');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+const closeChat = document.getElementById('closeChat');
+const aiAssistBtn = document.getElementById('AiAssist');
+const loadingMessage = document.getElementById('loadingMessage');
+const codePreview = document.getElementById('codePreview');
+const codePreviewContent = document.getElementById('codePreviewContent');
+const removeSnippet = document.getElementById('removeSnippet');
+const errorBubble = document.getElementById('errorBubble');
+const chatStatus = document.getElementById('chatStatus');
+
+// Выбор языка
+const langButtons = document.querySelectorAll('.lang-btn');
+langButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        langButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLanguage = btn.dataset.lang;
+        updatePlaceholder();
+    });
 });
 
-// Закрытие попапа
-closeBtn.addEventListener("click", () => {
-    popup.classList.remove("show");
-    overlay.classList.remove("show");
+function updatePlaceholder() {
+    if (currentLanguage === 'ru') {
+        chatInput.placeholder = '/explain, /fix, /improve или задай вопрос...';
+    } else {
+        chatInput.placeholder = 'Type /explain, /fix, /improve or ask a question...';
+    }
+}
+
+// Кнопки команд
+const commandButtons = document.querySelectorAll('.command-btn');
+commandButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const command = btn.dataset.command;
+        chatInput.value = command + ' ';
+        chatInput.focus();
+        
+        // Подсветка выбранной команды
+        commandButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
 });
 
-// Закрытие при клике на overlay
-overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-        popup.classList.remove("show");
-        overlay.classList.remove("show");
+// Очистка подсветки команд при вводе
+chatInput.addEventListener('input', () => {
+    if (!chatInput.value.startsWith('/explain') && 
+        !chatInput.value.startsWith('/fix') && 
+        !chatInput.value.startsWith('/improve')) {
+        commandButtons.forEach(b => b.classList.remove('active'));
+    }
+    
+    // авто-размер поля ввода
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+});
+
+// Открытие чата
+aiAssistBtn.addEventListener('click', () => {
+    overlay.classList.add('show');
+    chatContainer.classList.add('show');
+    chatInput.focus();
+    
+    // извлечение фрагментов кода с уязвимостями
+    extractVulnerabilityCode();
+});
+
+// закрытие чата
+closeChat.addEventListener('click', closeAIChat);
+overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeAIChat();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('show')) {
+        closeAIChat();
     }
 });
 
-// Функция для сбора данных об уязвимостях
-function collectVulnerabilities() {
-    const vulnerabilities = [];
-    const vulnCards = document.querySelectorAll('.vulnerability-card');
-    
-    vulnCards.forEach((card, index) => {
-        const title = card.querySelector('.vulnerability-title')?.textContent.trim() || `Уязвимость #${index + 1}`;
-        const severity = card.querySelector('.severity-badge')?.textContent.trim() || 'unknown';
-        const meta = card.querySelector('.vulnerability-meta')?.textContent.trim() || '';
-        const description = card.querySelector('.vulnerability-description')?.textContent.trim() || '';
-        const code = card.querySelector('pre')?.textContent.trim() || '';
-        
-        vulnerabilities.push({
-            title,
-            severity,
-            meta,
-            description,
-            code
-        });
-    });
-
-    return vulnerabilities.map((v, i) => 
-        `\n=== Уязвимость ${i + 1} ===\n` +
-        `Название: ${v.title}\n` +
-        `Уровень: ${v.severity}\n` +
-        `${v.meta}\n` +
-        `${v.description}\n` +
-        (v.code ? `Код:\n${v.code}\n` : '')
-    ).join('\n');
+function closeAIChat() {
+    overlay.classList.remove('show');
+    chatContainer.classList.remove('show');
 }
 
-// Функция для отправки запроса к ИИ
-async function sendToAI(command, buttonElement) {
+// Извлечение уязвимостей
+function extractVulnerabilityCode() {
+    const vulnerabilityCards = document.querySelectorAll('.vulnerability-card');
+    if (vulnerabilityCards.length > 0) {
+        let allCode = '';
+        vulnerabilityCards.forEach((card, index) => {
+            const codeElement = card.querySelector('.vulnerability-code');
+            if (codeElement) {
+                allCode += `// Уязвимость #${index + 1}\n${codeElement.textContent}\n\n`;
+            }
+        });
+        
+        if (allCode.trim()) {
+            attachedCode = allCode.trim();
+            showCodePreview(attachedCode);
+        }
+    }
+}
+
+function showCodePreview(code) {
+    codePreviewContent.textContent = code;
+    codePreview.classList.add('show');
+}
+
+removeSnippet.addEventListener('click', () => {
+    attachedCode = null;
+    codePreview.classList.remove('show');
+});
+
+// Отправка сообщения
+sendBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    // Скрыть ошибку
+    errorBubble.classList.remove('show');
+    
+    // Добавить сообщение пользователя в UI
+    addMessage(message, 'user');
+    
+    // Очистить ввод
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    
+    // Показать индикатор загрузки
+    loadingMessage.classList.add('show');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    sendBtn.disabled = true;
+    chatStatus.textContent = 'Думаю...';
+    
     try {
-        // Показываем индикатор загрузки
-        const originalText = buttonElement.textContent;
-        buttonElement.disabled = true;
-        buttonElement.textContent = "⏳ Обработка...";
-
-        // Собираем все найденные уязвимости
-        const vulnerabilitiesText = collectVulnerabilities();
-        const codeSnippet = `Найдены следующие уязвимости:\n${vulnerabilitiesText}`;
-
-        // Отправляем запрос к API
+        // Определение является ли сообщение командой или сообщением
+        let userCommand = message;
+        let isCommand = message.startsWith('/explain') || 
+                       message.startsWith('/fix') || 
+                       message.startsWith('/improve');
+        
+        // Если это команда: извлечь только команду
+        if (isCommand) {
+            userCommand = message.split(' ')[0];
+        }
+        
+            // Подготовка запроса
+        const requestData = {
+            user_command: userCommand,
+            AI_lang: currentLanguage,
+            code_snippet: attachedCode || ''
+        };
+        
+        // Отправка запроса к API
         const response = await fetch('/api/ai', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                user_command: command,
-                AI_lang: 'ru',
-                code_snippet: codeSnippet
-            })
+            body: JSON.stringify(requestData)
         });
-
+        
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Ошибка при обращении к API');
+            throw new Error(errorData.error || 'Ошибка сервера');
         }
-
+        
         const data = await response.json();
         
-        // Закрываем попап
-        popup.classList.remove("show");
-        overlay.classList.remove("show");
-
-        // Показываем результат
-        displayAIResponse(data.reply, command);
-
+        // Добавить ответ llm в UI
+        addMessage(data.reply, 'ai');
+        
+        // Обновить историю чата
+        conversationHistory.push({
+            user: message,
+            ai: data.reply
+        });
+        
+        chatStatus.textContent = 'Готов к работе';
+        
     } catch (error) {
-        console.error('Ошибка:', error);
-        alert(`Ошибка при анализе: ${error.message}`);
+        console.error('Error:', error);
+        showError(error.message);
+        chatStatus.textContent = 'Ошибка!';
     } finally {
-        // Возвращаем кнопку в исходное состояние
-        buttonElement.disabled = false;
-        buttonElement.textContent = originalText;
+        loadingMessage.classList.remove('show');
+        sendBtn.disabled = false;
+        chatInput.focus();
     }
 }
 
-// Обработчики для каждой кнопки
-explainBtn.addEventListener("click", () => sendToAI('/explain', explainBtn));
-fixBtn.addEventListener("click", () => sendToAI('/fix', fixBtn));
-improveBtn.addEventListener("click", () => sendToAI('/improve', improveBtn));
-
-// Функция для отображения ответа ИИ
-function displayAIResponse(aiReply, command) {
-    // Определяем заголовок в зависимости от команды
-    let title = '🤖 Анализ ИИ-помощника';
-    if (command === '/explain') {
-        title = '📖 Объяснение уязвимостей';
-    } else if (command === '/fix') {
-        title = '🔧 Предложения по исправлению';
-    } else if (command === '/improve') {
-        title = '⚡ Улучшения кода';
+function addMessage(text, type) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = type === 'user' ? '👤' : '🤖';
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    
+    // Форматирование блоков кода
+    let formattedText = text;
+    if (formattedText.includes('```')) {
+        formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
+            '<pre><code>$2</code></pre>');
     }
-
-    // Создаем новый блок для отображения ответа ИИ
-    const aiResultDiv = document.createElement('div');
-    aiResultDiv.className = 'result-section ai-result-section';
-    aiResultDiv.style.marginTop = '2rem';
-    aiResultDiv.innerHTML = `
-        <h2>${title}</h2>
-        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); white-space: pre-wrap; line-height: 1.8; color: var(--text-primary);">
-            ${escapeHtml(aiReply)}
-        </div>
-    `;
-
-    // Удаляем предыдущий результат ИИ, если есть
-    const oldResult = document.querySelector('.ai-result-section');
-    if (oldResult) {
-        oldResult.remove();
-    }
-
-    // Вставляем перед кнопкой "Новое сканирование"
-    const backButton = document.querySelector('.back-button');
-    if (backButton) {
-        backButton.parentNode.insertBefore(aiResultDiv, backButton);
-    } else {
-        document.querySelector('.results-container').appendChild(aiResultDiv);
-    }
-
-    // Плавная прокрутка к результату
-    aiResultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    content.innerHTML = formattedText.replace(/\n/g, '<br>');
+    
+    const time = document.createElement('div');
+    time.className = 'message-time';
+    time.textContent = new Date().toLocaleTimeString('ru-RU', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    content.appendChild(time);
+    
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(content);
+    
+    chatMessages.insertBefore(messageDiv, loadingMessage);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Функция для экранирования HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+function showError(message) {
+    errorBubble.textContent = `❌ ${message}`;
+    errorBubble.classList.add('show');
+    
+    setTimeout(() => {
+        errorBubble.classList.remove('show');
+    }, 5000);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('AI Chat initialized');
+});
