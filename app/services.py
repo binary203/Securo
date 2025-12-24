@@ -1,4 +1,5 @@
 from .models import db, Scans, Vulnerability, User
+from .LANG_PATTERNS import LANG_PATTERNS
 from openai import OpenAI
 from dotenv import load_dotenv
 import subprocess
@@ -8,8 +9,11 @@ import json
 import shutil
 import re
 import sys
+import certifi
 
 load_dotenv()
+
+LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct")
 
 LLM_client = OpenAI(
     base_url="https://router.huggingface.co/v1",
@@ -99,7 +103,7 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
 
     try:
         completion = LLM_client.chat.completions.create(
-            model="Qwen/Qwen2.5-Coder-7B-Instruct",
+            model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
@@ -107,7 +111,7 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
             timeout=120,
         )
 
-        return completion.choices[0].message.content
+        return completion.choices[0].message.content or ""
 
     except Exception as e:
         if "timeout" in str(e).lower() or "timed out" in str(e).lower():
@@ -119,7 +123,7 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
 
 
 class SemgrepCLIService:
-    # список поддерпживаемых языков
+    # список поддерживаемых языков
     Language = {
         "python": ".py",
         "javascript": ".js",
@@ -156,6 +160,10 @@ class SemgrepCLIService:
         "solidity": ".sol",
         "tsx": ".tsx",
         "xml": ".xml",
+        "cairo": ".cairo",
+        "circom": ".circom",
+        "hack": ".hack",
+        "move": ".move",
     }
 
     _STR_PATTERN = re.compile(
@@ -166,6 +174,16 @@ class SemgrepCLIService:
     _LINE_COMM_PATTERN = re.compile(r"(?m)//.*?$")
 
     _semgrep_path = None
+
+    @staticmethod
+    def _get_env():
+        env = os.environ.copy()
+        env["SEMGREP_SKIP_VERSION_CHECK"] = "1"
+        env["SEMGREP_SEND_METRICS"] = "off"
+
+        env["SSL_CERT_FILE"] = certifi.where()
+
+        return env
 
     @classmethod
     def reset_semgrep_cache(cls):
@@ -194,29 +212,42 @@ class SemgrepCLIService:
             if os.path.exists(venv_semgrep):
                 possible_paths.append(venv_semgrep)
 
+        for path in possible_paths:
+            try:
+                result = subprocess.run(
+                    [path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    env=cls._get_env(),
+                )
+                if (
+                    result.returncode == 0
+                    or "semgrep" in result.stdout.lower()
+                    or "semgrep" in result.stderr.lower()
+                ):
+                    cls._semgrep_path = path
+                    return cls._semgrep_path
+            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+                continue
+
         try:
             result = subprocess.run(
                 [sys.executable, "-m", "semgrep", "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
+                env=cls._get_env(),
             )
-            if result.returncode == 0:
+            if (
+                result.returncode == 0
+                or "semgrep" in result.stdout.lower()
+                or "semgrep" in result.stderr.lower()
+            ):
                 cls._semgrep_path = [sys.executable, "-m", "semgrep"]
                 return cls._semgrep_path
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
-
-        for path in possible_paths:
-            try:
-                result = subprocess.run(
-                    [path, "--version"], capture_output=True, text=True, timeout=10
-                )
-                if result.returncode == 0:
-                    cls._semgrep_path = path
-                    return cls._semgrep_path
-            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-                continue
 
         cls._semgrep_path = ""
         return None
@@ -225,7 +256,9 @@ class SemgrepCLIService:
         self.ruleset = ruleset
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
-            raise RuntimeError("semgrep CLI не найден.")
+            raise RuntimeError(
+                "semgrep CLI не найден. Убедитесь, что semgrep установлен (pip install semgrep) и доступен в PATH."
+            )
 
         if isinstance(semgrep_cmd, list):
             self._semgrep_cmd = semgrep_cmd
@@ -258,184 +291,7 @@ class SemgrepCLIService:
     def _detect_language(self, code: str) -> str:
         code_lower = self._code_cleaner(code)
         stripped_code = code.strip()
-        # Python
-        if any(
-            k in code_lower
-            for k in ["def ", "import ", "from ", "print(", "class ", "__init__"]
-        ):
-            if not any(
-                k in code_lower for k in ["function ", "var ", "let ", "const ", "=>"]
-            ):
-                return "python"
 
-        # JavaScript
-        if any(
-            k in code_lower
-            for k in [
-                "function ",
-                "var ",
-                "let ",
-                "const ",
-                "=>",
-                "console.log",
-                "document.",
-            ]
-        ):
-            if "interface " not in code_lower and "type " not in code_lower:
-                return "javascript"
-
-        # TypeScript
-        if any(
-            k in code_lower
-            for k in ["interface ", "type ", ": string", ": number", ": boolean"]
-        ):
-            return "typescript"
-
-        # Java
-        if any(
-            k in code_lower
-            for k in [
-                "public class",
-                "public static void",
-                "import java.",
-                "package java",
-                "@override",
-            ]
-        ):
-            return "java"
-
-        # C/C++
-        if any(
-            k in code_lower
-            for k in ["#include", "int main", "printf", "cout", "std::", "namespace "]
-        ):
-            return (
-                "cpp"
-                if any(
-                    k in code_lower
-                    for k in ["cout", "std::", "namespace ", "class ", "template<"]
-                )
-                else "c"
-            )
-
-        # Go
-        if any(
-            k in code_lower for k in ["package ", "func ", 'import "', ":= ", "go func"]
-        ):
-            return "go"
-
-        # Ruby
-        if (
-            any(
-                k in code_lower
-                for k in ["def ", "end", "require ", "class ", "module "]
-            )
-            and "def " in code_lower
-        ):
-            if "end" in code_lower and "print(" not in code_lower:
-                return "ruby"
-
-        # PHP
-        if any(
-            k in code_lower
-            for k in ["<?php", "$_", "->", "function ", "class ", "namespace "]
-        ):
-            if "<?php" in code_lower or "$" in code_lower[:100]:
-                return "php"
-
-        # C#
-        if any(
-            k in code_lower
-            for k in [
-                "using system",
-                "namespace ",
-                "public class",
-                "private ",
-                "get;",
-                "set;",
-            ]
-        ):
-            if "using system" in code_lower or "namespace " in code_lower:
-                return "csharp"
-
-        # Scala
-        if any(
-            k in code_lower
-            for k in ["object ", "def ", "val ", "var ", "def ", "extends ", "trait "]
-        ):
-            if "object " in code_lower and "extends " in code_lower:
-                return "scala"
-
-        # Kotlin
-        if any(
-            k in code_lower
-            for k in [
-                "fun ",
-                "val ",
-                "var ",
-                "class ",
-                "data class",
-                "companion object",
-            ]
-        ):
-            if "fun " in code_lower:
-                return "kotlin"
-
-        # Rust
-        if any(
-            k in code_lower
-            for k in ["fn ", "let ", "mut ", "struct ", "impl ", "use ", "::"]
-        ):
-            if "fn " in code_lower and "::" in code_lower:
-                return "rust"
-
-        # Swift
-        if any(
-            k in code_lower
-            for k in [
-                "func ",
-                "var ",
-                "let ",
-                "class ",
-                "struct ",
-                "import swift",
-                "guard ",
-            ]
-        ):
-            if "func " in code_lower and "import swift" in code_lower:
-                return "swift"
-
-        # Lua
-        if any(
-            k in code_lower
-            for k in ["function ", "local ", "end", "require(", "print("]
-        ):
-            if "local " in code_lower and "end" in code_lower:
-                return "lua"
-
-        # OCaml
-        if any(
-            k in code_lower
-            for k in ["let ", "in ", "match ", "with ", "type ", "module "]
-        ):
-            if "let " in code_lower and "in " in code_lower:
-                return "ocaml"
-
-        # Terraform
-        if any(
-            k in code_lower
-            for k in ["resource ", "provider ", "variable ", "output ", "terraform {"]
-        ):
-            return "terraform"
-
-        # YAML
-        if any(
-            k in code_lower for k in ["---", ":", "apiversion:", "kind:", "metadata:"]
-        ):
-            if code_lower.count(":") > 3 and "---" in code_lower:
-                return "yaml"
-
-        # JSON
         if stripped_code.startswith("{") or stripped_code.startswith("["):
             try:
                 json.loads(stripped_code)
@@ -443,152 +299,40 @@ class SemgrepCLIService:
             except json.JSONDecodeError:
                 pass
 
-        # HTML
-        if any(
-            k in code_lower
-            for k in ["<!doctype", "<html", "<head", "<body", "<div", "<script"]
-        ):
-            return "html"
+        best_match = "python"  # по умолчанию
+        max_matches = 0
 
-        # Dockerfile
-        if any(
-            k in code_lower
-            for k in ["from ", "run ", "copy ", "workdir ", "expose ", "cmd "]
-        ):
-            if code_lower.startswith("from ") or "from " in code_lower[:50]:
-                return "dockerfile"
+        for lang, patterns in LANG_PATTERNS.items():
+            matches = 0
+            for pattern in patterns:
+                if re.search(
+                    pattern,
+                    code_lower,
+                    (
+                        re.IGNORECASE
+                        if lang in ["dockerfile", "bash", "html", "yaml", "xml"]
+                        else 0
+                    ),
+                ):
+                    matches += 1
 
-        # Bash/Shell
-        if any(
-            k in code_lower
-            for k in ["#!/bin/bash", "#!/bin/sh", "echo ", "export ", "if [", "then "]
-        ):
-            if code_lower.startswith("#!") or "if [" in code_lower:
-                return "bash"
+            if lang == "bash" and code_lower.startswith("#!"):
+                matches += 5
+            if lang == "php" and "<?php" in code_lower:
+                matches += 5
+            if lang == "html" and "<!doctype" in code_lower:
+                matches += 5
+            if lang == "python" and "import os" in code_lower:
+                matches += 1
 
-        # Apex (Salesforce)
-        if any(
-            k in code_lower
-            for k in ["public class", "trigger ", "@istest", "database.", "sobject "]
-        ):
-            if "trigger " in code_lower or "@istest" in code_lower:
-                return "apex"
+            if matches > max_matches:
+                max_matches = matches
+                best_match = lang
 
-        # Clojure
-        if any(
-            k in code_lower for k in ["(def ", "(defn ", "(let ", "(if ", "(fn ", "ns "]
-        ):
-            if "(def " in code_lower or "(defn " in code_lower:
-                return "clojure"
+        if max_matches == 0:
+            return "python"
 
-        # Dart
-        if any(
-            k in code_lower
-            for k in ["void main()", "class ", "import ", "dart:", "async ", "await "]
-        ):
-            if "void main()" in code_lower or "dart:" in code_lower:
-                return "dart"
-
-        # Elixir
-        if any(
-            k in code_lower
-            for k in ["defmodule ", "def ", "defp ", "defmacro ", "|>", "do: "]
-        ):
-            if "defmodule " in code_lower or "|>" in code_lower:
-                return "elixir"
-
-        # JSX
-        if any(
-            k in code_lower
-            for k in ["<div", "<component", "react.", "import react", "jsx", "return ("]
-        ):
-            if "<div" in code_lower or "react." in code_lower:
-                if "interface " not in code_lower and ": string" not in code_lower:
-                    return "jsx"
-
-        # Julia
-        if any(
-            k in code_lower
-            for k in ["function ", "end", "using ", "import ", "::", "println("]
-        ):
-            if "function " in code_lower and "::" in code_lower:
-                return "julia"
-
-        # Jsonnet
-        if any(
-            k in code_lower for k in ["local ", "function(", "self.", "super.", "std."]
-        ):
-            if "local " in code_lower and "std." in code_lower:
-                return "jsonnet"
-
-        # Lisp
-        if any(
-            k in code_lower
-            for k in ["(defun ", "(defvar ", "(setq ", "(if ", "(let ", "(lambda "]
-        ):
-            if "(defun " in code_lower or "(lambda " in code_lower:
-                return "lisp"
-
-        # R
-        if any(
-            k in code_lower
-            for k in ["<-", "function(", "library(", "data.frame", "ggplot2", "print("]
-        ):
-            if "<-" in code_lower and "function(" in code_lower:
-                return "r"
-
-        # Scheme
-        if any(
-            k in code_lower
-            for k in [
-                "(define ",
-                "(lambda ",
-                "(let ",
-                "(if ",
-                "(cond ",
-                "(car ",
-                "(cdr ",
-            ]
-        ):
-            if "(define " in code_lower and "(lambda " in code_lower:
-                return "scheme"
-
-        # Solidity
-        if any(
-            k in code_lower
-            for k in [
-                "pragma solidity",
-                "contract ",
-                "function ",
-                "modifier ",
-                "event ",
-                "mapping(",
-            ]
-        ):
-            if "pragma solidity" in code_lower or "contract " in code_lower:
-                return "solidity"
-
-        # TSX
-        if any(
-            k in code_lower
-            for k in [
-                "<div",
-                "<component",
-                "react.",
-                "import react",
-                "interface ",
-                ": string",
-            ]
-        ):
-            if "<div" in code_lower and ": string" in code_lower:
-                return "tsx"
-
-        # XML
-        if any(k in code_lower for k in ["<?xml", "<root", "<element", "<tag", "</"]):
-            if "<?xml" in code_lower or ("<" in code_lower and "</" in code_lower):
-                return "xml"
-
-        return "python"  # по умолчанию
+        return best_match
 
     # внутренний метод сканирования кода
     def _run_code_scan(self, code: str) -> dict:
@@ -598,7 +342,10 @@ class SemgrepCLIService:
         # нормализация кода перед записью
         normalized_code = self._code_normalizer(code)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        local_tmp_path = os.path.join(os.getcwd(), "local_temp")
+        os.makedirs(local_tmp_path, exist_ok=True)
+
+        with tempfile.TemporaryDirectory(dir=local_tmp_path) as tmpdir:
             # проверка докера
             if current_language == "dockerfile":
                 temp_file = os.path.join(tmpdir, "Dockerfile")
@@ -622,12 +369,17 @@ class SemgrepCLIService:
                 capture_output=True,
                 text=True,
                 timeout=300,
+                env=self._get_env(),
             )
 
             if result.returncode != 0:
-                error_msg = result.stderr or result.stdout or "Неизвестная ошибка"
+                error_msg = (
+                    result.stderr
+                    or result.stdout
+                    or "Неизвестная ошибка (пустой вывод)"
+                )
                 raise RuntimeError(
-                    f"Ошибка сканирования (язык: {current_language}, файл: {temp_file}): {error_msg}"
+                    f"Ошибка сканирования (язык: {current_language}, файл: {temp_file}, код выхода: {result.returncode}): {error_msg}"
                 )
 
             try:
@@ -662,6 +414,7 @@ class SemgrepCLIService:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                # git clone обычно не требует этих переменных, но можно оставить env=None или os.environ
             )
 
             if clone.returncode != 0:
@@ -685,6 +438,7 @@ class SemgrepCLIService:
                 timeout=300,
                 encoding="utf-8",
                 errors="replace",
+                env=self._get_env(),
             )
 
             if scan.returncode != 0:
@@ -743,6 +497,7 @@ class SemgrepCLIService:
             capture_output=True,
             text=True,
             timeout=300,
+            env=self._get_env(),
         )
 
         if file_scan.returncode != 0:
@@ -766,125 +521,3 @@ class SemgrepCLIService:
 # фабричная функция для views.py
 def run_service():
     return SemgrepCLIService()
-
-
-"""
-# использовать если имеется api token
-class SemgrepAPIClient:
-    # клиент для semgrep api
-    def __init__(
-        self, SEMGREP_API_TOKEN: str, base_url: str = 'https://semgrep.dev/api/v1'
-    ):
-        self.SEMGREP_API_TOKEN = SEMGREP_API_TOKEN
-        self.base_url = base_url
-        self.headers = {
-            "Authorization": f"Bearer {SEMGREP_API_TOKEN}",
-            "Content-Type": "application/json",
-        }
-
-    # получить список deployments
-    def get_deployments(self):
-        url = f"{self.base_url}/deployments"
-        response = requests.get(url, headers=self.headers)
-        response.raise_for_status()
-        return response.json()
-
-    # создать новый скан
-    def create_scan(self, deployment_id: str, payload: dict):
-        url = f"{self.base_url}/deployments/{deployment_id}/scans"
-        response = requests.post(url, headers=self.headers, json=payload)
-        response.raise_for_status()
-        return response.json()
-
-    # получение статуса скана
-    def get_scan_status(self, deployment_id: str, scan_id: str):
-        url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = requests.get(url, headers=self.headers)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("Scans", {}).get("status", "unknown")
-
-    # получение резултатов скана
-    def get_scan_results(self, deployment_id: str, scan_id: str):
-        url = f"{self.base_url}/deployments/{deployment_id}/scans/{scan_id}"
-        response = requests.get(url, headers=self.headers)
-        response.raise_for_status()
-        return response.json()
-
-class SemgrepService:
-    def __init__(self):
-        token = current_app.config.get("SEMGREP_API_TOKEN")
-        if not token:
-            raise ValueError("API Токен отсутсутсвует")
-        self.client = SemgrepAPIClient(SEMGREP_API_TOKEN=token)
-        # загрузка deployment_id при инициализации
-        try:
-            deployments = self.client.get_deployments()
-            if deployments.get("deployments") and len(deployments["deployments"]) > 0:
-                self.deployment_id = deployments["deployments"][0]["id"]
-            else:
-                raise ValueError("Deployment не найден.")
-        except Exception as e:
-            raise ValueError(f"Ошибка получения deployment: {str(e)}")
-
-    def run_code_scan(self, code: str):
-        # отправка кода на скан
-        payload = {
-            "policy": "r2c-ci",
-            "source": {"type": "inline",
-                       "files": {"input_file": code}
-            },
-        }
-        scan_id = self._create_scan(payload)
-        self._wait_for_completion(scan_id)
-        return self._fetch_results(scan_id)
-
-    def run_repo_scan(self, repo_url: str):
-        # отправка репозитория на скан, на выбор юзеру
-        payload = {"policy": "r2c-ci",
-                   "source": {"type": "git",
-                              "url": repo_url}
-        }
-        scan_id = self._create_scan(payload)
-        self._wait_for_completion(scan_id)
-        return self._fetch_results(scan_id)
-
-    def _create_scan(self, payload: dict) -> str:
-        # cоздание задачи на сканирование
-        response = self.client.create_scan(self.deployment_id, payload)
-        scan_id = response.get("Scans", {}).get("id")
-        if not scan_id:
-            raise RuntimeError("scan_id не получен")
-        return scan_id
-
-    def _wait_for_completion(self, scan_id: str):
-        # ожидание завершения сканирования
-        max_attempts = 60  # +- 1 минута ожидания максимум
-        attempt = 0
-        while attempt < max_attempts:
-            scan_status = self.client.get_scan_status(self.deployment_id, scan_id)
-            if (
-                scan_status == "succeeded"
-                or scan_status == "completed"
-                or scan_status == "succeed"
-            ):
-                break
-            elif scan_status == "failed" or scan_status == "error":
-                raise RuntimeError("Ошибка сканирования")
-            else:
-                time.sleep(2)
-                attempt += 1
-        else:
-            raise RuntimeError("Превышено время ожидания завершения сканирования")
-
-    def _fetch_results(self, scan_id: str) -> dict:
-        # получение результатов сканирования
-        if not scan_id:
-            raise ValueError("scan_id пуст")
-        results = self.client.get_scan_results(self.deployment_id, scan_id)
-        return results
-
-
-def run_scanner_service():  # фабричная функция
-    return SemgrepService()
-"""
