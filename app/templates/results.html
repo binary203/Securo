@@ -1,114 +1,20 @@
 {% extends "base.html" %}
 
 {% block head %}
-<style>
 
-#overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    backdrop-filter: blur(4px);
-}
-
-#overlay.show {
-    display: block;
-    opacity: 1;
-}
-
-/* popup стили */
-.popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 2rem;
-    min-width: 400px;
-    max-width: 90%;
-    z-index: 10000;
-    display: none;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s ease;
-}
-
-.popup.show {
-    display: block;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.popup__content h2 {
-    margin-bottom: 1.5rem;
-    color: var(--text-primary);
-}
-
-.popup__content p {
-    margin-bottom: 1.5rem;
-}
-
-.popup__content button {
-    margin-right: 1rem;
-    margin-top: 1rem;
-}
-
-.ai-action-btn {
-    display: block;
-    width: 100%;
-    margin-bottom: 0.75rem;
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: var(--transition);
-    text-align: left;
-}
-
-.ai-action-btn:hover {
-    border-color: var(--text-primary);
-    background: var(--bg-card);
-}
-
-#AiAssist {
-    background: white;
-    color: var(--bg-primary);
-    border: none;
-    padding: 0.875rem 2rem;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 0.875rem;
-}
-
-#AiAssist:hover {
-    background: var(--accent-green-dim);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0, 255, 65, 0.2);
-}
-</style>
 {% endblock %}
 
 {% block body %}
 <div class="text">
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
-        
+        <!-- Кнопка LLM-помощи-->
         <div style="margin-bottom: 2rem;">
-            <button id="AiAssist">🤖 ИИ-помощник</button>
+            <button id="AiAssist">🤖 ИИ-помощь</button>
         </div>
-
+        <!-- Результаты сканирования-->
         {% if result %}
+            <!-- Вывод ошибок -->
             {% if result.error %}
             <div class="error-message">
                 <strong>Ошибка сканирования:</strong> {{ result.error }}
@@ -128,13 +34,13 @@
                             <div class="stat-value">{{ errors|length }}</div>
                         </div>
                     </div>
-                    
+                    <!-- Вывод найденных уязвимостей -->
                     {% if findings|length > 0 %}
                     <div class="result-section">
                         <h2>Найденные уязвимости</h2>
                         
                         {% for finding in findings %}
-                        <div class="vulnerability-card">
+                        <div class="vulnerability-card" data-vulnerability-index="{{ loop.index }}">
                             <div class="vulnerability-header">
                                 <span class="vulnerability-title">
                                     {% if finding.check_id %}
@@ -173,7 +79,7 @@
                             {% endif %}
                             
                             {% if finding.extra and finding.extra.lines %}
-                            <pre>{{ finding.extra.lines }}</pre>
+                            <pre class="vulnerability-code">{{ finding.extra.lines }}</pre>
                             {% endif %}
                         </div>
                         {% endfor %}
@@ -196,7 +102,7 @@
                         {% endfor %}
                     </div>
                     {% endif %}
-                    
+                <!-- Вывод сырых результатов, если уязвимости не найдены-->
                 {% else %}
                 <div class="result-section">
                     <h2>Сырые Результаты</h2>
@@ -206,32 +112,84 @@
             {% endif %}
         {% else %}
         <div class="error-message">
-            Результаты сканирования не получены. Результатов нет.
+            Результаты сканирования не получены.
         </div>
         {% endif %}
         
         <a href="{{ url_for('scan') }}" class="back-button">← Новое сканирование</a>
     </div>
 </div>
-
+<!-- оверлей LLM -->
 <div id="overlay">
-    <div id="popup" class="popup">
-        <div class="popup__content">
-            <h2>🤖 ИИ-помощник</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                Выберите действие для работы с найденными уязвимостями
-            </p>
-            <button id="explainBtn" class="ai-action-btn">
-                📖 Объяснить уязвимости
-            </button>
-            <button id="fixBtn" class="ai-action-btn">
-                🔧 Предложить исправления
-            </button>
-            <button id="improveBtn" class="ai-action-btn">
-                ⚡ Улучшить код
-            </button>
-            <div style="margin-top: 1.5rem;">
-                <button id="close" class="btn-outline">Закрыть</button>
+    <div class="chat-container" id="chatContainer">
+        <!-- ЗАголовок -->
+        <div class="chat-header">
+            <div>
+                <h2>🤖 ИИ-ассистент по безопасности</h2>
+                <div class="status" id="chatStatus">Готов к работе</div>
+            </div>
+            <button class="close-chat" id="closeChat">✕ Закрыть</button>
+        </div>
+
+        <!-- Панель команд -->
+        <div class="commands-panel">
+            <button class="command-btn" data-command="/explain">📖 /explain - Объяснить</button>
+            <button class="command-btn" data-command="/fix">🔧 /fix - Исправить</button>
+            <button class="command-btn" data-command="/improve">⚡ /improve - Улучшить</button>
+        </div>
+
+        <!-- Выбор языка  -->
+        <div class="language-selector" style="padding: 0 1.5rem; padding-top: 1rem;">
+            <button class="lang-btn active" data-lang="ru">🇷🇺 Русский</button>
+            <button class="lang-btn" data-lang="eng">🇬🇧 English</button>
+        </div>
+
+            <!-- Сообщения чата -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="message">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <strong>Привет! Я ИИ-ассистент по безопасности.</strong><br><br>
+                    Я могу:<br>
+                    • <code>/explain</code> - объяснить уязвимости<br>
+                    • <code>/fix</code> - исправить код<br>
+                    • <code>/improve</code> - улучшить код<br><br>
+                    Или просто задавай вопросы о безопасности кода!
+                </div>
+            </div>
+        </div>
+
+        <!-- Индикатоор загрузки -->
+        <div class="message loading-message" id="loadingMessage">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <div class="loading-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВВод сообщения -->
+        <div class="chat-input-area">
+            <div class="error-bubble" id="errorBubble"></div>
+            
+            <div class="code-snippet-preview" id="codePreview">
+                <div class="code-snippet-preview-header">
+                    <span>📎 Прикрепленный код</span>
+                    <button class="remove-snippet" id="removeSnippet">✕ Удалить</button>
+                </div>
+                <pre id="codePreviewContent"></pre>
+            </div>
+
+            <div class="input-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Напиши /explain, /fix, /improve или задай вопрос..."
+                    rows="1"></textarea>
+                <button class="send-btn" id="sendBtn">Отправить</button>
             </div>
         </div>
     </div>
