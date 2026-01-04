@@ -59,7 +59,7 @@ chatInput.addEventListener('input', () => {
         commandButtons.forEach(b => b.classList.remove('active'));
     }
     
-    // авто-размер поля ввода
+    // Авто-размер поля ввода
     chatInput.style.height = 'auto';
     chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
 });
@@ -70,11 +70,11 @@ aiAssistBtn.addEventListener('click', () => {
     chatContainer.classList.add('show');
     chatInput.focus();
     
-    // извлечение фрагментов кода с уязвимостями
+    // Извлечение фрагментов кода с уязвимостями
     extractVulnerabilityCode();
 });
 
-// закрытие чата
+// Закрытие чата
 closeChat.addEventListener('click', closeAIChat);
 overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeAIChat();
@@ -253,3 +253,4 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('AI Chat initialized');
 });
+
