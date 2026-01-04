@@ -156,16 +156,30 @@ async function sendMessage() {
                        message.startsWith('/fix') || 
                        message.startsWith('/improve');
         
-        // Если это команда: извлечь только команду
+        // Переменная для кода в сообщении
+        let codeSnippetToSend = attachedCode || '';
+
+        // обработка ручного ввода кода
         if (isCommand) {
-            userCommand = message.split(' ')[0];
+            const spaceIndex = message.indexOf(' ');
+            
+            if (spaceIndex !== -1) {
+                // Отделление команды от текста
+                userCommand = message.substring(0, spaceIndex);
+                const manualCode = message.substring(spaceIndex + 1).trim();
+                
+                // текст из чата если нет прикрепленного
+                if (!codeSnippetToSend && manualCode.length > 0) {
+                    codeSnippetToSend = manualCode;
+                }
+            }
         }
         
-            // Подготовка запроса
+        // Подготовка запроса
         const requestData = {
             user_command: userCommand,
             AI_lang: currentLanguage,
-            code_snippet: attachedCode || ''
+            code_snippet: codeSnippetToSend 
         };
         
         // Отправка запроса к API
@@ -253,4 +267,5 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('AI Chat initialized');
 });
+
 
