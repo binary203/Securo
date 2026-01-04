@@ -252,7 +252,7 @@ class SemgrepCLIService:
         cls._semgrep_path = ""
         return None
 
-    def __init__(self, ruleset="p/ci"):
+    def __init__(self, ruleset="p/default"):
         self.ruleset = ruleset
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
