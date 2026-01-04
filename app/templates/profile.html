@@ -6,12 +6,12 @@
 {% block body %}
 <div class="container">
     <h1>Profile</h1><br>
-    <form action="{{ url_for('logout') }}", method="GET">
-        <button type="submit">Выйти</button>
-    </form>
-    <br>
     <form action="{{ url_for('scan') }}", method="GET">
         <button type="submit">Сканирование</button>
+    </form>
+    <br> 
+    <form action="{{ url_for('logout') }}", method="GET">
+        <button type="submit">Выйти</button>
     </form>
 </div>
 {% endblock %}
