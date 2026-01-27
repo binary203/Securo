@@ -1,0 +1,351 @@
+rules:
+  # Offline ruleset to keep scanner working without semgrep.dev access.
+  # You can override via env: SEMGREP_RULESET="p/security-audit" (requires internet).
+
+  - id: python.command-injection.os-system
+    message: "Potential command injection: avoid os.system(...) with untrusted input."
+    languages: [python]
+    severity: ERROR
+    pattern: os.system(...)
+    metadata:
+      cwe: "CWE-78"
+      owasp: "A03:2021-Injection"
+
+  - id: python.command-injection.subprocess-shell-true
+    message: "Potential command injection: subprocess call with shell=True."
+    languages: [python]
+    severity: ERROR
+    pattern: subprocess.$F(..., shell=True, ...)
+    metadata:
+      cwe: "CWE-78"
+      owasp: "A03:2021-Injection"
+
+  - id: python.code-exec.eval
+    message: "Dangerous code execution: avoid eval(...) on untrusted data."
+    languages: [python]
+    severity: ERROR
+    pattern: eval(...)
+    metadata:
+      cwe: "CWE-95"
+      owasp: "A03:2021-Injection"
+
+  - id: python.insecure-deserialization.pickle-loads
+    message: "Insecure deserialization: avoid pickle.loads(...) on untrusted data."
+    languages: [python]
+    severity: ERROR
+    pattern: pickle.loads(...)
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021-Software and Data Integrity Failures"
+
+  - id: js.code-exec.eval
+    message: "Avoid eval(...): it can lead to code injection."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern: eval(...)
+    metadata:
+      cwe: "CWE-95"
+      owasp: "A03:2021-Injection"
+
+  - id: js.code-exec.new-function
+    message: "Avoid new Function(...): it can lead to code injection."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern: new Function(...)
+    metadata:
+      cwe: "CWE-95"
+      owasp: "A03:2021-Injection"
+
+  - id: js.command-exec.child-process-exec
+    message: "Potential command execution: child_process.exec(...) can be dangerous with untrusted input."
+    languages: [javascript, typescript]
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: require("child_process").exec(...)
+          - pattern: require('child_process').exec(...)
+          - pattern: child_process.exec(...)
+    metadata:
+      cwe: "CWE-78"
+      owasp: "A03:2021-Injection"
+
+  # -----------------------------
+  # JS/TS: XSS, NoSQL, JWT, Angular (Juice Shop, Node, Express)
+  # -----------------------------
+
+  - id: js.xss.innerHTML
+    message: "Possible XSS: assigning to innerHTML with unchecked data."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern: $OBJ.innerHTML = $VAL
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021-Injection"
+
+  - id: js.xss.document-write
+    message: "Possible XSS: document.write() with dynamic data."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern: document.write($X)
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021-Injection"
+
+  - id: js.angular.bypass-security-trust
+    message: "Bypassing Angular sanitizer can lead to XSS (bypassSecurityTrustHtml/Url/ResourceUrl/Script)."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern-either:
+      - pattern: $SAN.bypassSecurityTrustHtml(...)
+      - pattern: $SAN.bypassSecurityTrustUrl(...)
+      - pattern: $SAN.bypassSecurityTrustResourceUrl(...)
+      - pattern: $SAN.bypassSecurityTrustScript(...)
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021-Injection"
+
+  - id: js.sql.sequelize-query-concat
+    message: "Possible SQL injection: sequelize.query() with string concatenation."
+    languages: [javascript, typescript]
+    severity: ERROR
+    pattern: $DB.query($A + $B)
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021-Injection"
+
+  - id: js.jwt.localStorage
+    message: "Storing JWT/token in localStorage is vulnerable to XSS; prefer httpOnly cookies."
+    languages: [javascript, typescript]
+    severity: WARNING
+    pattern-either:
+      - pattern: localStorage.setItem("token", ...)
+      - pattern: localStorage.setItem("jwt", ...)
+      - pattern: localStorage.setItem("id_token", ...)
+      - pattern: localStorage.setItem("access_token", ...)
+      - pattern: localStorage.setItem('token', ...)
+      - pattern: localStorage.setItem('jwt', ...)
+    metadata:
+      cwe: "CWE-522"
+      owasp: "A07:2021-Identification and Authentication Failures"
+
+  - id: js.node.ssrf-http-get
+    message: "Possible SSRF: http(s).get() with variable URL; ensure it is not user-controlled."
+    languages: [javascript, typescript]
+    severity: WARNING
+    pattern-either:
+      - pattern: require("http").get($URL)
+      - pattern: require("https").get($URL)
+      - pattern: require('http').get($URL)
+      - pattern: require('https').get($URL)
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021-Server-Side Request Forgery"
+
+  # -----------------------------
+  # Java / Spring (WebGoat-friendly)
+  # -----------------------------
+
+  - id: java.command-exec.runtime-exec
+    message: "Potential command execution: Runtime.getRuntime().exec(...)"
+    languages: [java]
+    severity: ERROR
+    pattern: Runtime.getRuntime().exec(...)
+    metadata:
+      cwe: "CWE-78"
+
+  - id: java.command-exec.processbuilder
+    message: "Potential command execution: new ProcessBuilder(...)"
+    languages: [java]
+    severity: ERROR
+    pattern: new ProcessBuilder(...)
+    metadata:
+      cwe: "CWE-78"
+
+  - id: java.sql.statement-concat
+    message: "Possible SQL injection: SQL built via string concatenation."
+    languages: [java]
+    severity: ERROR
+    pattern-either:
+      - pattern: $ST.executeQuery($Q + $X)
+      - pattern: $ST.executeUpdate($Q + $X)
+      - pattern: $ST.execute($Q + $X)
+      - pattern: $CON.prepareStatement($Q + $X)
+    metadata:
+      cwe: "CWE-89"
+
+  - id: java.sql.jdbc-template-concat
+    message: "Possible SQL injection: JdbcTemplate query built via string concatenation."
+    languages: [java]
+    severity: ERROR
+    pattern-either:
+      - pattern: $JT.queryForObject($Q + $X, ...)
+      - pattern: $JT.queryForList($Q + $X, ...)
+      - pattern: $JT.query($Q + $X, ...)
+      - pattern: $JT.update($Q + $X, ...)
+    metadata:
+      cwe: "CWE-89"
+
+  - id: java.xss.responsewriter-request-param
+    message: "Possible XSS: writing request parameter to response without encoding."
+    languages: [java]
+    severity: ERROR
+    patterns:
+      - pattern: $RESP.getWriter().print($REQ.getParameter(...))
+    metadata:
+      cwe: "CWE-79"
+
+  - id: java.xss.servlet-outputstream-request-param
+    message: "Possible XSS: writing request parameter to response output stream without encoding."
+    languages: [java]
+    severity: ERROR
+    patterns:
+      - pattern: $RESP.getOutputStream().print($REQ.getParameter(...))
+    metadata:
+      cwe: "CWE-79"
+
+  - id: java.path-traversal.new-file-request-param
+    message: "Possible path traversal: File constructed from request parameter."
+    languages: [java]
+    severity: ERROR
+    pattern-either:
+      - pattern: new java.io.File($REQ.getParameter(...))
+      - pattern: new java.io.FileInputStream($REQ.getParameter(...))
+      - pattern: new java.io.FileReader($REQ.getParameter(...))
+    metadata:
+      cwe: "CWE-22"
+
+  - id: java.ssrf.url-from-request
+    message: "Possible SSRF: URL constructed from request parameter."
+    languages: [java]
+    severity: ERROR
+    pattern-either:
+      - pattern: new java.net.URL($REQ.getParameter(...))
+      - pattern: new java.net.URI($REQ.getParameter(...))
+    metadata:
+      cwe: "CWE-918"
+
+  - id: java.crypto.weak-md5
+    message: "Weak cryptography: MD5 is broken."
+    languages: [java]
+    severity: WARNING
+    pattern: java.security.MessageDigest.getInstance("MD5")
+    metadata:
+      cwe: "CWE-327"
+
+  - id: java.crypto.weak-sha1
+    message: "Weak cryptography: SHA-1 is broken."
+    languages: [java]
+    severity: WARNING
+    pattern-either:
+      - pattern: java.security.MessageDigest.getInstance("SHA1")
+      - pattern: java.security.MessageDigest.getInstance("SHA-1")
+    metadata:
+      cwe: "CWE-327"
+
+  - id: java.crypto.insecure-cipher-des
+    message: "Insecure cipher: DES/3DES is weak."
+    languages: [java]
+    severity: WARNING
+    pattern-either:
+      - pattern: javax.crypto.Cipher.getInstance("DES")
+      - pattern: javax.crypto.Cipher.getInstance("DESede")
+      - pattern: javax.crypto.Cipher.getInstance("3DES")
+    metadata:
+      cwe: "CWE-327"
+
+  - id: java.crypto.insecure-random
+    message: "Insecure randomness: java.util.Random is not cryptographically secure."
+    languages: [java]
+    severity: WARNING
+    pattern: new java.util.Random(...)
+    metadata:
+      cwe: "CWE-338"
+
+  - id: java.hardcoded-credential.password-literal
+    message: "Hardcoded credential: looks like a password literal."
+    languages: [java]
+    severity: WARNING
+    pattern-either:
+      - pattern: $X = "password"
+      - pattern: $X = "admin"
+      - pattern: $X = "secret"
+    metadata:
+      cwe: "CWE-798"
+
+  - id: java.sql.dynamic-execution
+    message: "Review for SQL injection: dynamic SQL executed."
+    languages: [java]
+    severity: WARNING
+    patterns:
+      - pattern-either:
+          - pattern: $ST.executeQuery($SQL)
+          - pattern: $ST.executeUpdate($SQL)
+          - pattern: $ST.execute($SQL)
+          - pattern: $CON.prepareStatement($SQL)
+      - pattern-not: $ST.executeQuery("...")
+      - pattern-not: $ST.executeUpdate("...")
+      - pattern-not: $ST.execute("...")
+      - pattern-not: $CON.prepareStatement("...")
+    metadata:
+      cwe: "CWE-89"
+
+  - id: java.sql.jdbc-template-dynamic
+    message: "Review for SQL injection: JdbcTemplate called with dynamic SQL."
+    languages: [java]
+    severity: WARNING
+    patterns:
+      - pattern-either:
+          - pattern: $JT.queryForObject($SQL, ...)
+          - pattern: $JT.queryForList($SQL, ...)
+          - pattern: $JT.query($SQL, ...)
+          - pattern: $JT.update($SQL, ...)
+      - pattern-not: $JT.queryForObject("...", ...)
+      - pattern-not: $JT.queryForList("...", ...)
+      - pattern-not: $JT.query("...", ...)
+      - pattern-not: $JT.update("...", ...)
+    metadata:
+      cwe: "CWE-89"
+
+  - id: java.xss.responsewriter-dynamic
+    message: "Possible XSS: dynamic data written to response without encoding."
+    languages: [java]
+    severity: WARNING
+    patterns:
+      - pattern: $RESP.getWriter().print($X)
+      - pattern-not: $RESP.getWriter().print("...")
+    metadata:
+      cwe: "CWE-79"
+
+  - id: java.redirect.from-request
+    message: "Possible open redirect: redirect target taken from request parameter."
+    languages: [java]
+    severity: ERROR
+    pattern: $RESP.sendRedirect($REQ.getParameter(...))
+    metadata:
+      cwe: "CWE-601"
+
+  - id: java.insecure-deserialization.objectinputstream
+    message: "Insecure deserialization: ObjectInputStream.readObject() can be dangerous with untrusted input."
+    languages: [java]
+    severity: ERROR
+    pattern: new java.io.ObjectInputStream(...).readObject(...)
+    metadata:
+      cwe: "CWE-502"
+
+  - id: java.xxe.documentbuilderfactory-newinstance
+    message: "XXE risk: DocumentBuilderFactory.newInstance() should be hardened (disable external entities/DTD)."
+    languages: [java]
+    severity: WARNING
+    pattern: javax.xml.parsers.DocumentBuilderFactory.newInstance()
+    metadata:
+      cwe: "CWE-611"
+
+  - id: java.crypto.ecb-mode
+    message: "Insecure cipher mode: ECB is not semantically secure."
+    languages: [java]
+    severity: WARNING
+    pattern-either:
+      - pattern: javax.crypto.Cipher.getInstance("AES/ECB/...")
+      - pattern: javax.crypto.Cipher.getInstance("DES/ECB/...")
+    metadata:
+      cwe: "CWE-327"
