@@ -250,7 +250,7 @@ class SemgrepCLIService:
 
         try:
             result = subprocess.run(
-                [sys.executable, "semgrep", "--version"],
+                [sys.executable, "-m", "semgrep", "--version"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -261,7 +261,7 @@ class SemgrepCLIService:
                 or "semgrep" in result.stdout.lower()
                 or "semgrep" in result.stderr.lower()
             ):
-                cls._semgrep_path = [sys.executable, "semgrep"]
+                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
                 return cls._semgrep_path
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
