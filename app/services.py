@@ -206,7 +206,6 @@ class SemgrepCLIService:
     
         possible_paths = []
     
-        # semgrep из PATH
         path = shutil.which("semgrep")
         if path:
             possible_paths.append(path)
@@ -247,6 +246,24 @@ class SemgrepCLIService:
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 continue
     
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "semgrep", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=cls._get_env(),
+            )
+            if (
+                result.returncode == 0
+                or "semgrep" in result.stdout.lower()
+                or "semgrep" in result.stderr.lower()
+            ):
+                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
+                return cls._semgrep_path
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+    
         cls._semgrep_path = ""
         return None
 
@@ -258,10 +275,12 @@ class SemgrepCLIService:
     
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
-            raise RuntimeError("semgrep CLI не найден. Установи `semgrep` и убедись, что он в PATH.")
+            raise RuntimeError("semgrep CLI не найден. Убедись, что пакет `semgrep` установлен.")
     
-        self._semgrep_cmd = [semgrep_cmd]
-
+        if isinstance(semgrep_cmd, list):
+            self._semgrep_cmd = semgrep_cmd
+        else:
+            self._semgrep_cmd = [semgrep_cmd]
 
     @staticmethod
     def _should_replace_lines(existing_lines) -> bool:
