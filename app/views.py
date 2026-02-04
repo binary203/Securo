@@ -143,7 +143,7 @@ def scan():
         return render_template("scan.html", form=form)
     return render_template("scan.html", form=form)
 
-
+# LLM api AJAX route
 @app.route("/api/ai", methods=["POST"])
 @login_required
 def AI():
