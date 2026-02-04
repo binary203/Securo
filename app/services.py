@@ -184,12 +184,8 @@ class SemgrepCLIService:
         env = os.environ.copy()
         env["SEMGREP_SKIP_VERSION_CHECK"] = "1"
         env["SEMGREP_SEND_METRICS"] = "off"
-
         env["SSL_CERT_FILE"] = certifi.where()
-
-        if "SEMGREP_APP_TOKEN" in env and not env["SEMGREP_APP_TOKEN"].strip():
-            del env["SEMGREP_APP_TOKEN"]
-
+        env["PATH"] = env.get("PATH", "") + ":/usr/local/bin"
         return env
 
     @classmethod
@@ -200,7 +196,6 @@ class SemgrepCLIService:
     def _find_semgrep(cls):
         if cls._semgrep_path is not None and cls._semgrep_path != "":
             return cls._semgrep_path
-    
         if cls._semgrep_path == "":
             return None
     
@@ -209,7 +204,7 @@ class SemgrepCLIService:
         path = shutil.which("semgrep")
         if path:
             possible_paths.append(path)
-    
+
         if os.name == "nt":
             local_venv_semgrep = os.path.join(
                 _PROJECT_ROOT, ".venv", "Scripts", "semgrep.exe"
@@ -246,26 +241,9 @@ class SemgrepCLIService:
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 continue
     
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "semgrep", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                env=cls._get_env(),
-            )
-            if (
-                result.returncode == 0
-                or "semgrep" in result.stdout.lower()
-                or "semgrep" in result.stderr.lower()
-            ):
-                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
-                return cls._semgrep_path
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-    
         cls._semgrep_path = ""
         return None
+
 
     def __init__(self, ruleset: str | None = None):
         self.fallback_ruleset = (
@@ -275,12 +253,10 @@ class SemgrepCLIService:
     
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
-            raise RuntimeError("semgrep CLI не найден. Убедись, что пакет `semgrep` установлен.")
-    
-        if isinstance(semgrep_cmd, list):
-            self._semgrep_cmd = semgrep_cmd
-        else:
-            self._semgrep_cmd = [semgrep_cmd]
+            raise RuntimeError("semgrep CLI не найден. Убедись, что `semgrep` установлен в контейнере.")
+        
+        self._semgrep_cmd = [semgrep_cmd]
+
 
     @staticmethod
     def _should_replace_lines(existing_lines) -> bool:
