@@ -200,17 +200,17 @@ class SemgrepCLIService:
     def _find_semgrep(cls):
         if cls._semgrep_path is not None and cls._semgrep_path != "":
             return cls._semgrep_path
-
+    
         if cls._semgrep_path == "":
             return None
-
+    
         possible_paths = []
-
+    
+        # semgrep из PATH
         path = shutil.which("semgrep")
         if path:
             possible_paths.append(path)
-
-        # Project-local venv
+    
         if os.name == "nt":
             local_venv_semgrep = os.path.join(
                 _PROJECT_ROOT, ".venv", "Scripts", "semgrep.exe"
@@ -219,16 +219,15 @@ class SemgrepCLIService:
             local_venv_semgrep = os.path.join(_PROJECT_ROOT, ".venv", "bin", "semgrep")
         if os.path.exists(local_venv_semgrep):
             possible_paths.append(local_venv_semgrep)
-
+    
         if hasattr(sys, "prefix") and sys.prefix != sys.base_prefix:
-            if os.name == "nt":  # Windows
+            if os.name == "nt":
                 venv_semgrep = os.path.join(sys.prefix, "Scripts", "semgrep.exe")
-            else:  # Linux
+            else:
                 venv_semgrep = os.path.join(sys.prefix, "bin", "semgrep")
-
             if os.path.exists(venv_semgrep):
                 possible_paths.append(venv_semgrep)
-
+    
         for path in possible_paths:
             try:
                 result = subprocess.run(
@@ -247,42 +246,22 @@ class SemgrepCLIService:
                     return cls._semgrep_path
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 continue
-
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "semgrep", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                env=cls._get_env(),
-            )
-            if (
-                result.returncode == 0
-                or "semgrep" in result.stdout.lower()
-                or "semgrep" in result.stderr.lower()
-            ):
-                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
-                return cls._semgrep_path
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
+    
         cls._semgrep_path = ""
         return None
 
     def __init__(self, ruleset: str | None = None):
-        # fallback по умолчанию
         self.fallback_ruleset = (
             _DEFAULT_LOCAL_RULESET if os.path.exists(_DEFAULT_LOCAL_RULESET) else None
         )
         self.ruleset = ruleset or os.getenv("SEMGREP_RULESET") or "p/owasp-top-ten"
+    
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
-            raise RuntimeError("semgrep CLI не найден.")
+            raise RuntimeError("semgrep CLI не найден. Установи `semgrep` и убедись, что он в PATH.")
+    
+        self._semgrep_cmd = [semgrep_cmd]
 
-        if isinstance(semgrep_cmd, list):
-            self._semgrep_cmd = semgrep_cmd
-        else:
-            self._semgrep_cmd = [semgrep_cmd]
 
     @staticmethod
     def _should_replace_lines(existing_lines) -> bool:
