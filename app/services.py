@@ -379,6 +379,14 @@ class SemgrepCLIService:
             if snippet:
                 extra["lines"] = snippet
 
+        if "errors" in semgrep_json:
+            semgrep_json["errors"] = [
+                e
+                for e in semgrep_json["errors"]
+                if "Syntax error" not in e.get("message", "")
+                and "Syntax error" not in str(e)
+            ]
+
         return semgrep_json
 
     def _run_semgrep_json(self, target: str, ruleset: str) -> dict:
@@ -641,27 +649,32 @@ class SemgrepCLIService:
     # внутренний метод сканирования файла
     def _run_file_scan(self, file_path: str) -> dict:
         if not os.path.exists(file_path):
-            raise ValueError(f"Файл не найден: {file_path}")
+            raise ValueError(f"Файл или директория не найдены: {file_path}")
 
-        if not os.path.isfile(file_path):
-            raise ValueError(f"Указанный путь не является файлом: {file_path}")
+        is_dir = os.path.isdir(file_path)
 
-        file_ext = os.path.splitext(file_path)[1].lower()
-        file_name = os.path.basename(file_path).lower()
+        if not is_dir:
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Указанный путь не является файлом: {file_path}")
 
-        detected_language = None
-        for lang, ext in self.Language.items():
-            if file_ext == ext or (file_name == "dockerfile" and lang == "dockerfile"):
-                detected_language = lang
-                break
+            file_ext = os.path.splitext(file_path)[1].lower()
+            file_name = os.path.basename(file_path).lower()
 
-        if not detected_language:
-            try:
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    code_content = f.read()
-                detected_language = self._detect_language(code_content)
-            except Exception as e:
-                raise RuntimeError(f"Не удалось определить язык: {str(e)}")
+            detected_language = None
+            for lang, ext in self.Language.items():
+                if file_ext == ext or (
+                    file_name == "dockerfile" and lang == "dockerfile"
+                ):
+                    detected_language = lang
+                    break
+
+            if not detected_language:
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        code_content = f.read()
+                    detected_language = self._detect_language(code_content)
+                except Exception as e:
+                    raise RuntimeError(f"Не удалось определить язык: {str(e)}")
 
         try:
             semgrep_json = self._run_semgrep_json(file_path, self.ruleset)
