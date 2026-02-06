@@ -44,7 +44,7 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
         raise ValueError(f"Запрос слишком длинный. Максимум {MAX_CODE_LENGTH} символов")
 
     system_prompt = """
-    You are highly skilled in cybersecurity, secure coding, vulnerability analysis, code quality, refactoring, and debugging. 
+    You are highly skilled in cybersecurity, secure coding, vulnerability analysis, code quality, refactoring, and debugging. If the user used a Russian word in the query, answer in Russian.
     Your responsibilities include:
     detecting vulnerabilities, bugs, and logical errors;
 
@@ -184,8 +184,14 @@ class SemgrepCLIService:
         env = os.environ.copy()
         env["SEMGREP_SKIP_VERSION_CHECK"] = "1"
         env["SEMGREP_SEND_METRICS"] = "off"
+        env["PYTHONUTF8"] = "1"
+
         env["SSL_CERT_FILE"] = certifi.where()
-        env["PATH"] = env.get("PATH", "") + ":/usr/local/bin"
+
+        # Если токен задан, но пуст (например, SEMGREP_APP_TOKEN= в .env), удаляем его
+        if "SEMGREP_APP_TOKEN" in env and not env["SEMGREP_APP_TOKEN"].strip():
+            del env["SEMGREP_APP_TOKEN"]
+
         return env
 
     @classmethod
@@ -196,11 +202,12 @@ class SemgrepCLIService:
     def _find_semgrep(cls):
         if cls._semgrep_path is not None and cls._semgrep_path != "":
             return cls._semgrep_path
+
         if cls._semgrep_path == "":
             return None
-    
+
         possible_paths = []
-    
+
         path = shutil.which("semgrep")
         if path:
             possible_paths.append(path)
@@ -213,15 +220,16 @@ class SemgrepCLIService:
             local_venv_semgrep = os.path.join(_PROJECT_ROOT, ".venv", "bin", "semgrep")
         if os.path.exists(local_venv_semgrep):
             possible_paths.append(local_venv_semgrep)
-    
+
         if hasattr(sys, "prefix") and sys.prefix != sys.base_prefix:
-            if os.name == "nt":
+            if os.name == "nt":  # Windows
                 venv_semgrep = os.path.join(sys.prefix, "Scripts", "semgrep.exe")
-            else:
+            else:  # Linux
                 venv_semgrep = os.path.join(sys.prefix, "bin", "semgrep")
+
             if os.path.exists(venv_semgrep):
                 possible_paths.append(venv_semgrep)
-    
+
         for path in possible_paths:
             try:
                 result = subprocess.run(
@@ -240,23 +248,41 @@ class SemgrepCLIService:
                     return cls._semgrep_path
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 continue
-    
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "semgrep", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=cls._get_env(),
+            )
+            if (
+                result.returncode == 0
+                or "semgrep" in result.stdout.lower()
+                or "semgrep" in result.stderr.lower()
+            ):
+                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
+                return cls._semgrep_path
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+
         cls._semgrep_path = ""
         return None
-
 
     def __init__(self, ruleset: str | None = None):
         self.fallback_ruleset = (
             _DEFAULT_LOCAL_RULESET if os.path.exists(_DEFAULT_LOCAL_RULESET) else None
         )
         self.ruleset = ruleset or os.getenv("SEMGREP_RULESET") or "p/owasp-top-ten"
-    
         semgrep_cmd = self._find_semgrep()
         if semgrep_cmd is None:
-            raise RuntimeError("semgrep CLI не найден. Убедись, что `semgrep` установлен в контейнере.")
-        
-        self._semgrep_cmd = [semgrep_cmd]
+            raise RuntimeError("semgrep CLI не найден.")
 
+        if isinstance(semgrep_cmd, list):
+            self._semgrep_cmd = semgrep_cmd
+        else:
+            self._semgrep_cmd = [semgrep_cmd]
 
     @staticmethod
     def _should_replace_lines(existing_lines) -> bool:
@@ -302,7 +328,7 @@ class SemgrepCLIService:
             return None
 
         start_idx = max(1, start_line - context) - 1
-        end_idx = min(len(lines), end_line + context)
+        end_idx = min(len(lines), end_line + context)  # slicing end is exclusive
         snippet_lines = lines[start_idx:end_idx]
         if not snippet_lines:
             return None
@@ -386,6 +412,15 @@ class SemgrepCLIService:
                     error_msg = (result.stderr or result.stdout or "").strip()
             except (json.JSONDecodeError, TypeError):
                 error_msg = (result.stderr or result.stdout or "").strip()
+
+            if "401" in error_msg:
+                error_msg += " [HINT: Проверьте SEMGREP_APP_TOKEN в .env. Если он неверный, удалите переменную.]"
+
+            if error_msg == "":
+                error_msg = (
+                    "Semgrep завершился с ошибкой без текста. "
+                    "Частая причина: недоступен ruleset или проблемы сети/прокси."
+                )
             raise RuntimeError(
                 f"Ошибка сканирования (код {result.returncode}): {error_msg}"
             )
@@ -488,7 +523,7 @@ class SemgrepCLIService:
             try:
                 semgrep_json = self._run_semgrep_json(temp_file, self.ruleset)
             except RuntimeError as e:
-                # Фоллбек на локальные правила
+                # Фоллбек на локальные правила (полезно, если ruleset = p/... и semgrep.dev недоступен)
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
                     print(
                         f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение на fallback: {self.fallback_ruleset}"
@@ -564,10 +599,9 @@ class SemgrepCLIService:
             )
 
             if scan.returncode != 0:
-                # фоллбек на локальные правила если ruleset не работает
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
                     print(
-                        f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение: {self.fallback_ruleset}"
+                        f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение на fallback: {self.fallback_ruleset}"
                     )
                     try:
                         err_data = json.loads(scan.stdout)
@@ -584,7 +618,11 @@ class SemgrepCLIService:
                     )
 
                 error_msg = (scan.stderr or scan.stdout or "").strip()
-
+                if error_msg == "":
+                    error_msg = (
+                        "Semgrep завершился с ошибкой без текста. "
+                        "Частая причина: недоступен ruleset (например, semgrep.dev) или проблемы сети/прокси."
+                    )
                 raise RuntimeError(
                     f"Ошибка сканирования (код {scan.returncode}): {error_msg}"
                 )
