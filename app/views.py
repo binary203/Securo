@@ -8,6 +8,7 @@ from .forms import LoginForm, ScanForm, RegistrationForm
 from .services import run_service, run_LLM
 import tempfile
 import os
+import shutil
 
 
 # Индекс страница
@@ -76,45 +77,49 @@ def scan():
             scanner = run_service()
             code = form.code.data.strip() if form.code.data else ""
             repo_url = form.repo_url.data.strip() if form.repo_url.data else ""
-            uploaded_file = form.file.data
-            temp_file_path = None
 
-            if uploaded_file and uploaded_file.filename:
-                if uploaded_file.filename.strip() == "":
-                    flash("Имя файла не должно быть пустым")
+            uploaded_files = form.file.data
+            uploaded_files = [f for f in uploaded_files if f.filename]
+
+            temp_dir_path = None
+
+            if uploaded_files:
+                if len(uploaded_files) > 5:
+                    flash("Максимум 5 файлов за раз")
                     return render_template("scan.html", form=form)
 
-                # проверка размера файла
-                uploaded_file.seek(0, 2)
-                file_size = uploaded_file.tell()
-                uploaded_file.seek(0)
+                temp_dir_path = tempfile.mkdtemp()
 
-                if file_size == 0:
-                    flash("Файл не должен быть пустым")
-                    return render_template("scan.html", form=form)
-                elif file_size > 20 * 1024 * 1024:  # 20 MB (подсчет в байтах)
-                    flash("Файл не должен превышать 20 МБ")
-                    return render_template("scan.html", form=form)
-
-                file_ext = os.path.splitext(uploaded_file.filename)[1]
-                if uploaded_file.filename.lower() == "dockerfile":
-                    suffix = ""
-                else:
-                    suffix = file_ext
-
-                # сохранение временного файла
-                with tempfile.NamedTemporaryFile(
-                    delete=False, suffix=suffix
-                ) as tmp_file:
-                    uploaded_file.save(tmp_file.name)
-                    temp_file_path = tmp_file.name
                 try:
-                    # сканирование
-                    result = scanner.run_file_scan(temp_file_path)
+                    for file in uploaded_files:
+                        filename = file.filename
+                        if not filename:
+                            continue
+
+                        from werkzeug.utils import secure_filename
+
+                        safe_filename = secure_filename(filename)
+                        if not safe_filename:
+                            safe_filename = "uploaded_file"
+
+                        file.seek(0, 2)
+                        size = file.tell()
+                        file.seek(0)
+
+                        if size > 20 * 1024 * 1024:
+                            flash(f"Файл {filename} слишком большой (>20MB)")
+                            shutil.rmtree(temp_dir_path)
+                            return render_template("scan.html", form=form)
+
+                        save_path = os.path.join(temp_dir_path, safe_filename)
+                        file.save(save_path)
+
+                    result = scanner.run_file_scan(temp_dir_path)
+
                 finally:
-                    # удаление в конце
-                    if temp_file_path and os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
+                    if temp_dir_path and os.path.exists(temp_dir_path):
+                        shutil.rmtree(temp_dir_path)
+
             # проверка входных данных
             elif code:
                 result = scanner.run_code_scan(code)
@@ -143,7 +148,7 @@ def scan():
         return render_template("scan.html", form=form)
     return render_template("scan.html", form=form)
 
-# LLM api AJAX route
+
 @app.route("/api/ai", methods=["POST"])
 @login_required
 def AI():

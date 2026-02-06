@@ -1,8 +1,15 @@
 # Импорты
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Optional, Length
+from wtforms import (
+    StringField,
+    PasswordField,
+    BooleanField,
+    SubmitField,
+    TextAreaField,
+    MultipleFileField,
+)
+from wtforms.validators import DataRequired, Optional, Length, EqualTo
 
 
 # Форма для логина
@@ -12,58 +19,28 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField("Запомнить меня")
     submit = SubmitField("Войти")
 
+
 class RegistrationForm(FlaskForm):
     username = StringField("Имя", validators=[DataRequired()])
     password = PasswordField("Пароль", validators=[DataRequired()])
+    confirm_password = PasswordField(
+        "Повторите пароль",
+        validators=[
+            DataRequired(),
+            EqualTo("password", message="Пароли должны совпадать"),
+        ],
+    )
     submit = SubmitField("Зарегистрироваться")
+
 
 class ScanForm(FlaskForm):
     code = TextAreaField("Code", validators=[Optional(), Length(max=10000)])
     repo_url = StringField("Repository URL", validators=[Optional()])
-    file = FileField(
+    file = MultipleFileField(
         "Upload File",
         validators=[
             Optional(),
-            FileAllowed(
-                [
-                    "py",
-                    "js",
-                    "ts",
-                    "java",
-                    "c",
-                    "cpp",
-                    "go",
-                    "rb",
-                    "php",
-                    "cs",
-                    "scala",
-                    "kt",
-                    "rs",
-                    "swift",
-                    "lua",
-                    "ml",
-                    "tf",
-                    "yaml",
-                    "json",
-                    "html",
-                    "sh",
-                    "cls",
-                    "clj",
-                    "dart",
-                    "ex",
-                    "jsx",
-                    "jl",
-                    "jsonnet",
-                    "lisp",
-                    "r",
-                    "scm",
-                    "sol",
-                    "tsx",
-                    "xml",
-                    "", # dockerfile
-                ],
-                "Неподдерживаемый тип файла",
-            ),
         ],
+        render_kw={"multiple": True},
     )
     submit = SubmitField("Scan Code")
