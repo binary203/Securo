@@ -6,22 +6,44 @@
 {% block body %}
     <div class="container">
         <h1>Hello Friend</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <p class="flash flash-{{ category }}">{{ message }}</p>
+          {% endfor %}
+        {% endwith %}
+
         <form action="" method="post" novalidate>
             {{ form.hidden_tag() }}
-        <div>
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}
-        </div>
-        <br>
-        <div>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
-        </div>
-        <br>
-        <div>
-            {{ form.submit() }}
-        </div>
-        <br>
+            <div>
+                {{ form.username.label }}<br>
+                {{ form.username(size=32) }}
+                {% for error in form.username.errors %}
+                  <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <br>
+            <div>
+                {{ form.password.label }}<br>
+                {{ form.password(size=32) }}
+                {% for error in form.password.errors %}
+                  <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <br>
+            <div>
+                {{ form.confirm_password.label }}<br>
+                {{ form.confirm_password(size=32) }}
+                {% for error in form.confirm_password.errors %}
+                  <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <br>
+            <div>
+                {{ form.submit() }}
+            </div>
+            <br>
         </form>
+        <a href="{{ url_for('login') }}">Уже есть аккаунт? Войти</a>
     </div>
 {% endblock %}

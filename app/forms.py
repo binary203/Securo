@@ -14,15 +14,27 @@ from wtforms.validators import DataRequired, Optional, Length, EqualTo
 
 # Форма для логина
 class LoginForm(FlaskForm):
-    username = StringField("Имя", validators=[DataRequired()])
+    username = StringField("Имя", validators=[DataRequired(), Length(min=3, max=32)])
     password = PasswordField("Пароль", validators=[DataRequired()])
     remember_me = BooleanField("Запомнить меня")
     submit = SubmitField("Войти")
 
 
 class RegistrationForm(FlaskForm):
-    username = StringField("Имя", validators=[DataRequired()])
-    password = PasswordField("Пароль", validators=[DataRequired()])
+    username = StringField(
+        "Имя пользователя",
+        validators=[
+            DataRequired(),
+            Length(min=3, max=32, message="Имя должно быть от 3 до 32 символов"),
+        ],
+    )
+    password = PasswordField(
+        "Пароль",
+        validators=[
+            DataRequired(),
+            Length(min=6, message="Пароль должен содержать минимум 6 символов"),
+        ],
+    )
     confirm_password = PasswordField(
         "Повторите пароль",
         validators=[
