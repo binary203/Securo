@@ -10,5 +10,79 @@
 </head>
 <body>
     {% block body %}{% endblock %}
+
+    <div id="toast-container" aria-live="polite"></div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <script>
+            const _flashMessages = {{ messages | tojson }};
+        </script>
+        {% endif %}
+    {% endwith %}
+
+    <script>
+    (function () {
+        const container = document.getElementById('toast-container');
+
+        function createToast(category, message) {
+            const toast = document.createElement('div');
+            const icons = { error: '✖', success: '✔', warning: '⚠', message: '◈' };
+            const icon = icons[category] || icons['message'];
+            toast.className = 'toast toast-' + category;
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-text">${message}</span>
+                <button class="toast-close" aria-label="Закрыть">✕</button>
+            `;
+            toast.querySelector('.toast-close').addEventListener('click', () => dismiss(toast));
+            container.appendChild(toast);
+
+            const timer = setTimeout(() => dismiss(toast), 4000);
+            toast._timer = timer;
+            return toast;
+        }
+
+        function dismiss(toast) {
+            clearTimeout(toast._timer);
+            toast.classList.add('toast-hide');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }
+
+        if (typeof _flashMessages !== 'undefined') {
+            _flashMessages.forEach(([category, message]) => {
+                createToast(category, message);
+            });
+        }
+
+        window.showToast = createToast;
+    })();
+
+    (function () {
+        function initTypewriter(h1) {
+            var text = (h1.innerText || h1.textContent || '').trim();
+            if (!text) return;
+
+            h1.innerHTML = '<span class="type-cursor">&#x2588;</span>';
+            var cursor = h1.querySelector('.type-cursor');
+
+            var i = 0;
+            // пауза 300мс перед стартом, затем 160мс на символ
+            setTimeout(function () {
+                var interval = setInterval(function () {
+                    if (i < text.length) {
+                        h1.insertBefore(document.createTextNode(text[i]), cursor);
+                        i++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 160);
+            }, 300);
+        }
+
+        document.querySelectorAll('h1').forEach(initTypewriter);
+    })();
+
+    </script>
 </body>
 </html>
