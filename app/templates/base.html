@@ -11,15 +11,8 @@
 <body>
     {% block body %}{% endblock %}
 
-    <div id="toast-container" aria-live="polite"></div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <script>
-            const _flashMessages = {{ messages | tojson }};
-        </script>
-        {% endif %}
-    {% endwith %}
+    <div id="toast-container" aria-live="polite"
+         data-messages="{{ get_flashed_messages(with_categories=true) | tojson }}"></div>
 
     <script>
     (function () {
@@ -49,10 +42,14 @@
             toast.addEventListener('animationend', () => toast.remove(), { once: true });
         }
 
-        if (typeof _flashMessages !== 'undefined') {
-            _flashMessages.forEach(([category, message]) => {
-                createToast(category, message);
-            });
+        // читаем flash-сообщения из data-атрибута (без Jinja в <script>)
+        var raw = container.getAttribute('data-messages');
+        if (raw && raw !== '[]') {
+            try {
+                JSON.parse(raw).forEach(function (item) {
+                    createToast(item[0], item[1]);
+                });
+            } catch (e) {}
         }
 
         window.showToast = createToast;
@@ -67,7 +64,6 @@
             var cursor = h1.querySelector('.type-cursor');
 
             var i = 0;
-            // пауза 300мс перед стартом, затем 160мс на символ
             setTimeout(function () {
                 var interval = setInterval(function () {
                     if (i < text.length) {
