@@ -213,6 +213,7 @@ Vulnerability_Checker/
                     └──────────────┘
 ```
 
+### Модели БД
 ```python
 User         — id, username, password_hash, date_created
 Scans        — id, user_id, date_scan, code_language, code
