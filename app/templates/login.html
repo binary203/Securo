@@ -1,45 +1,66 @@
 {% extends "base.html" %}
 
-{% block head %}
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block body %}
   <div class="container">
     <h1>WHO AM I?</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <p class="flash flash-{{ category }}">{{ message }}</p>
-      {% endfor %}
-    {% endwith %}
-
-    <form action="" method="post" novalidate>
+    <div class="auth-card">
+      <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <div>
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}
-            {% for error in form.username.errors %}
-              <span class="field-error">{{ error }}</span>
-            {% endfor %}
+
+        <div class="form-group">
+          {{ form.username.label }}
+          {{ form.username(size=32, class="form-input" + (" input-error" if form.username.errors else ""), placeholder="Введите имя пользователя") }}
+          {% for error in form.username.errors %}
+            <span class="field-error">{{ error }}</span>
+          {% endfor %}
         </div>
-        <br>
-        <div>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
-            {% for error in form.password.errors %}
-              <span class="field-error">{{ error }}</span>
-            {% endfor %}
+
+        <div class="form-group">
+          {{ form.password.label }}
+          <div class="password-wrapper">
+            {{ form.password(size=32, class="form-input" + (" input-error" if form.password.errors else ""), placeholder="Введите пароль") }}
+            <button type="button" class="password-toggle" aria-label="Показать пароль">
+              <span class="eye-icon">○</span>
+            </button>
+          </div>
+          {% for error in form.password.errors %}
+            <span class="field-error">{{ error }}</span>
+          {% endfor %}
         </div>
-        <br>
-        <div>
-            {{ form.remember_me() }} {{ form.remember_me.label }}
+
+        <div class="form-group checkbox-group">
+          {{ form.remember_me() }} {{ form.remember_me.label }}
         </div>
-        <br>
-        <div>
-            {{ form.submit() }}
+
+        <div class="form-group">
+          {{ form.submit(class="btn-full") }}
         </div>
-        <br>
-    </form>
-    <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
+      </form>
+
+      <div class="auth-footer">
+        <a href="{{ url_for('registration') }}">Нет аккаунта? <span>Зарегистрироваться</span></a>
+      </div>
+    </div>
   </div>
+
+  <script>
+    document.querySelectorAll('.password-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = btn.previousElementSibling;
+        const icon = btn.querySelector('.eye-icon');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.textContent = '●';
+          btn.setAttribute('aria-label', 'Скрыть пароль');
+        } else {
+          input.type = 'password';
+          icon.textContent = '○';
+          btn.setAttribute('aria-label', 'Показать пароль');
+        }
+      });
+    });
+  </script>
 {% endblock %}

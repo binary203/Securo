@@ -55,9 +55,8 @@ def registration():
     form = RegistrationForm()
 
     if form.validate_on_submit():
-        # Проверка на дублирующийся username (общее сообщение для защиты от перечисления)
         if User.query.filter_by(username=form.username.data).first():
-            flash("Не удалось создать аккаунт. Проверьте введённые данные.", "error")
+            flash("Не удалось создать аккаунт. Пользователь уже существует.", "error")
             return redirect(url_for("registration"))
 
         new_user = User(username=form.username.data)
@@ -192,3 +191,9 @@ def logout():
     logout_user()
     flash("Вы вышли из системы")
     return redirect(url_for("index"))
+
+
+# Обработчик ошибки 429
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template("429.html"), 429
