@@ -1,13 +1,20 @@
 # Импорты
 import os
+from dotenv import load_dotenv
 
-# Находит директорию проекта, нужно для того чтобы конфиг применился
+# Загружаем .env из папки app/
+load_dotenv(os.path.join(os.path.abspath(os.path.dirname(__file__)), "app", ".env"))
+
+# Находит директорию проекта
 app_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 # Базовый конфиг
 class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+    SECRET_KEY: str = os.environ.get(
+        "SECRET_KEY", "fallback-dev-key-change-in-production"
+    )
 
 
 class DevelopmentConfig(BaseConfig):

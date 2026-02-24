@@ -1,5 +1,5 @@
 # Импорты
-from app import app, db
+from app import app, db, limiter
 from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User
@@ -26,6 +26,7 @@ def profile():
 
 # Логин
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("profile"))
@@ -37,7 +38,7 @@ def login():
         )
 
         if user is None or not user.check_password(form.password.data):
-            flash("Invalid username or password")
+            flash("Неверное имя пользователя или пароль", "error")
             return redirect(url_for("login"))
         login_user(user, remember=form.remember_me.data)
         return redirect(url_for("index"))
@@ -46,12 +47,18 @@ def login():
 
 # Регистрация
 @app.route("/registration", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def registration():
+    if current_user.is_authenticated:
+        return redirect(url_for("profile"))
+
     form = RegistrationForm()
 
     if form.validate_on_submit():
+        # Проверка на дублирующийся username (общее сообщение для защиты от перечисления)
         if User.query.filter_by(username=form.username.data).first():
-            return render_template(url_for("registration"))
+            flash("Не удалось создать аккаунт. Проверьте введённые данные.", "error")
+            return redirect(url_for("registration"))
 
         new_user = User(username=form.username.data)
         new_user.set_password(password=form.password.data)
@@ -59,8 +66,8 @@ def registration():
         db.session.add(new_user)
         db.session.commit()
 
-        login_user(new_user)
-        return redirect("/")
+        flash("Регистрация прошла успешно! Войдите в аккаунт.", "success")
+        return redirect(url_for("login"))
 
     return render_template("register.html", form=form)
 
