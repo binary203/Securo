@@ -9,7 +9,7 @@ from wtforms import (
     TextAreaField,
     MultipleFileField,
 )
-from wtforms.validators import DataRequired, Optional, Length, EqualTo
+from wtforms.validators import DataRequired, Optional, Length, EqualTo, Regexp
 
 
 # Форма для логина
@@ -47,7 +47,16 @@ class RegistrationForm(FlaskForm):
 
 class ScanForm(FlaskForm):
     code = TextAreaField("Code", validators=[Optional(), Length(max=10000)])
-    repo_url = StringField("Repository URL", validators=[Optional()])
+    repo_url = StringField(
+        "Repository URL",
+        validators=[
+            Optional(),
+            Regexp(
+                r"^https://(github\.com|gitlab\.com)/.+",
+                message="URL должен начинаться с https://github.com/ или https://gitlab.com/",
+            ),
+        ],
+    )
     file = MultipleFileField(
         "Upload File",
         validators=[

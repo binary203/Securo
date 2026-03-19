@@ -179,7 +179,8 @@ async function sendMessage() {
         const requestData = {
             user_command: userCommand,
             AI_lang: currentLanguage,
-            code_snippet: codeSnippetToSend 
+            code_snippet: codeSnippetToSend,
+            history: conversationHistory.slice(-5)
         };
         
         // Отправка запроса к API
@@ -220,6 +221,13 @@ async function sendMessage() {
     }
 }
 
+// HTML-экранирование для защиты от XSS
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function addMessage(text, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
@@ -231,14 +239,21 @@ function addMessage(text, type) {
     const content = document.createElement('div');
     content.className = 'message-content';
     
-    // Форматирование блоков кода
-    let formattedText = text;
-    if (formattedText.includes('```')) {
-        formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
+    if (type === 'user') {
+        // Пользовательские сообщения
+        content.textContent = text;
+    } else {
+        // AI ответы -экранирование HTML, форматирование кода, переносы строк
+        let safe = escapeHTML(text);
+        // Форматирование блоков кода
+        safe = safe.replace(/```(\w+)?\n([\s\S]*?)```/g,
             '<pre><code>$2</code></pre>');
+        // Инлайн код
+        safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Переносы строк
+        safe = safe.replace(/\n/g, '<br>');
+        content.innerHTML = safe;
     }
-    
-    content.innerHTML = formattedText.replace(/\n/g, '<br>');
     
     const time = document.createElement('div');
     time.className = 'message-time';

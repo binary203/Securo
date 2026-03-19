@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -6,9 +7,10 @@ from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Создание приложения
+# Cоздание приложения
 app = Flask(__name__)
-app.config.from_object("config.DevelopmentConfig")
+_config_name = os.environ.get('FLASK_CONFIG', 'DevelopmentConfig')
+app.config.from_object(f'config.{_config_name}')
 
 # Инициализация расширений
 db = SQLAlchemy(app)
@@ -20,6 +22,8 @@ login_manager.login_message = "Для доступа к этой страниц�
 login_manager.login_message_category = "warning"
 
 # Rate limiter
+# memory:// сбрасывается при рестарте сервера.
+# Для продакшена Redis: storage_uri="redis://localhost:6379"
 limiter = Limiter(
     get_remote_address,
     app=app,

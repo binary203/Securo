@@ -5,13 +5,33 @@
 
 {% block body %}
 <div class="container">
-    <h1>Profile</h1><br>
-    <form action="{{ url_for('scan') }}", method="GET">
-        <button type="submit">Сканирование</button>
-    </form>
-    <br> 
-    <form action="{{ url_for('logout') }}", method="GET">
-        <button type="submit">Выйти</button>
-    </form>
+    <h1>ПРОФИЛЬ</h1>
+
+    <div class="profile-card">
+        <div class="profile-info">
+            <div class="profile-row">
+                <span class="profile-label">Пользователь</span>
+                <span class="profile-value">{{ current_user.username }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Дата регистрации</span>
+                <span class="profile-value">{{ current_user.date_created.strftime('%d.%m.%Y') }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Всего сканирований</span>
+                <span class="profile-value">{{ scan_count }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Найдено уязвимостей</span>
+                <span class="profile-value">{{ vuln_count }}</span>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <form action="{{ url_for('scan') }}" method="GET">
+                <button type="submit">🔍 Новое сканирование</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
