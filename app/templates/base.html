@@ -9,6 +9,18 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="navbar-brand">SECURO</a>
+        <div class="navbar-links">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('scan') }}">Сканнер</a>
+                <a href="{{ url_for('profile') }}">Профиль</a>
+                <a href="{{ url_for('logout') }}">Выход</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Войти</a>
+            {% endif %}
+        </div>
+    </nav>
     {% block body %}{% endblock %}
 
     <div id="toast-container" aria-live="polite"
@@ -42,7 +54,6 @@
             toast.addEventListener('animationend', () => toast.remove(), { once: true });
         }
 
-        // читаем flash-сообщения из data-атрибута (без Jinja в <script>)
         var raw = container.getAttribute('data-messages');
         if (raw && raw !== '[]') {
             try {

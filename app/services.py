@@ -1,15 +1,20 @@
-from .models import db, Scans, Vulnerability, User
-from .LANG_PATTERNS import LANG_PATTERNS
-from openai import OpenAI
-from dotenv import load_dotenv
-import subprocess
-import tempfile
-import os
+import logging
 import json
-import shutil
+import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
+
 import certifi
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from .LANG_PATTERNS import LANG_PATTERNS
+from .models import db, Scans, Vulnerability, User
+
+logger = logging.getLogger(__name__)
 
 load_dotenv(override=True)
 
@@ -25,7 +30,7 @@ LLM_client = OpenAI(
 )
 
 
-def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
+def run_LLM(user_command: str, AI_lang: str, code_snippet: str, history: list | None = None) -> str:
     MAX_CODE_LENGTH = 10000
 
     # Валидация входных данных
@@ -106,12 +111,22 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
     prompt = f"""Task: {task}. Code:\n{code_snippet}"""
 
     try:
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Добавление истории чата для контекста
+        if history and isinstance(history, list):
+            for entry in history[-5:]:
+                if isinstance(entry, dict):
+                    if entry.get("user"):
+                        messages.append({"role": "user", "content": entry["user"]})
+                    if entry.get("ai"):
+                        messages.append({"role": "assistant", "content": entry["ai"]})
+
+        messages.append({"role": "user", "content": prompt})
+
         completion = LLM_client.chat.completions.create(
             model=LLM_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
+            messages=messages,
             timeout=120,
         )
 
@@ -390,7 +405,7 @@ class SemgrepCLIService:
         return semgrep_json
 
     def _run_semgrep_json(self, target: str, ruleset: str) -> dict:
-        print(f"DEBUG: Запуск Semgrep с набором правил: {ruleset}")
+        logger.debug("Запуск Semgrep с набором правил: %s", ruleset)
         result = subprocess.run(
             self._semgrep_cmd
             + [
@@ -533,10 +548,11 @@ class SemgrepCLIService:
             except RuntimeError as e:
                 # Фоллбек на локальные правила (полезно, если ruleset = p/... и semgrep.dev недоступен)
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
-                    print(
-                        f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение на fallback: {self.fallback_ruleset}"
+                    logger.warning(
+                        "Ошибка с правилами '%s'. Переключение на fallback: %s",
+                        self.ruleset, self.fallback_ruleset,
                     )
-                    print(f"DEBUG: Текст ошибки: {e}")
+                    logger.debug("Текст ошибки: %s", e)
                     semgrep_json = self._run_semgrep_json(
                         temp_file, self.fallback_ruleset
                     )
@@ -577,7 +593,7 @@ class SemgrepCLIService:
                     f"Ошибка клонирования: {clone.stderr or clone.stdout}"
                 )
 
-            print(f"DEBUG: Запуск Semgrep (repo) с набором правил: {self.ruleset}")
+            logger.debug("Запуск Semgrep (repo) с набором правил: %s", self.ruleset)
             scan = subprocess.run(
                 self._semgrep_cmd
                 + [
@@ -608,16 +624,17 @@ class SemgrepCLIService:
 
             if scan.returncode != 0:
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
-                    print(
-                        f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение на fallback: {self.fallback_ruleset}"
+                    logger.warning(
+                        "Ошибка с правилами '%s'. Переключение на fallback: %s",
+                        self.ruleset, self.fallback_ruleset,
                     )
                     try:
                         err_data = json.loads(scan.stdout)
                         for err in err_data.get("errors", []):
-                            print(f"DEBUG: Semgrep API Error: {err.get('message')}")
+                            logger.warning("Semgrep API Error: %s", err.get('message'))
                     except json.JSONDecodeError:
-                        print(f"DEBUG: Ошибка Semgrep (stderr): {scan.stderr}")
-                        print(f"DEBUG: Ошибка Semgrep (stdout): {scan.stdout}")
+                        logger.debug("Ошибка Semgrep (stderr): %s", scan.stderr)
+                        logger.debug("Ошибка Semgrep (stdout): %s", scan.stdout)
                     semgrep_json = self._run_semgrep_json(
                         repo_dir, self.fallback_ruleset
                     )
@@ -680,10 +697,11 @@ class SemgrepCLIService:
             semgrep_json = self._run_semgrep_json(file_path, self.ruleset)
         except RuntimeError as e:
             if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
-                print(
-                    f"DEBUG: Ошибка с правилами '{self.ruleset}'. Переключение на fallback: {self.fallback_ruleset}"
+                logger.warning(
+                    "Ошибка с правилами '%s'. Переключение на fallback: %s",
+                    self.ruleset, self.fallback_ruleset,
                 )
-                print(f"DEBUG: Текст ошибки: {e}")
+                logger.debug("Текст ошибки: %s", e)
                 semgrep_json = self._run_semgrep_json(file_path, self.fallback_ruleset)
             else:
                 raise e
