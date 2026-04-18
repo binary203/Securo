@@ -3,6 +3,7 @@ let currentLanguage = 'ru';
 let attachedCode = null;
 let conversationHistory = [];
 
+
 // Элементы интерфейса
 const overlay = document.getElementById('overlay');
 const chatContainer = document.getElementById('chatContainer');
@@ -179,8 +180,7 @@ async function sendMessage() {
         const requestData = {
             user_command: userCommand,
             AI_lang: currentLanguage,
-            code_snippet: codeSnippetToSend,
-            history: conversationHistory.slice(-5)
+            code_snippet: codeSnippetToSend 
         };
         
         // Отправка запроса к API
@@ -221,13 +221,6 @@ async function sendMessage() {
     }
 }
 
-// HTML-экранирование для защиты от XSS
-function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
 function addMessage(text, type) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
@@ -239,20 +232,35 @@ function addMessage(text, type) {
     const content = document.createElement('div');
     content.className = 'message-content';
     
-    if (type === 'user') {
-        // Пользовательские сообщения
-        content.textContent = text;
-    } else {
-        // AI ответы -экранирование HTML, форматирование кода, переносы строк
-        let safe = escapeHTML(text);
-        // Форматирование блоков кода
-        safe = safe.replace(/```(\w+)?\n([\s\S]*?)```/g,
-            '<pre><code>$2</code></pre>');
-        // Инлайн код
-        safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
-        // Переносы строк
-        safe = safe.replace(/\n/g, '<br>');
-        content.innerHTML = safe;
+    // Форматирование
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            const textBefore = text.substring(lastIndex, match.index);
+            const span = document.createElement('span');
+            span.textContent = textBefore;
+            span.innerHTML = span.innerHTML.replace(/\n/g, '<br>');
+            content.appendChild(span);
+        }
+        
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.textContent = match[2];
+        pre.appendChild(code);
+        content.appendChild(pre);
+        
+        lastIndex = match.index + match[0].length;
+    }
+    
+    if (lastIndex < text.length) {
+        const remaining = text.substring(lastIndex);
+        const span = document.createElement('span');
+        span.textContent = remaining;
+        span.innerHTML = span.innerHTML.replace(/\n/g, '<br>');
+        content.appendChild(span);
     }
     
     const time = document.createElement('div');
@@ -282,5 +290,4 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('AI Chat initialized');
 });
-
 
