@@ -12,28 +12,89 @@
     {% block head %}{% endblock %}
 </head>
 <body>
-    <div class="brand">Securo</div>
-    {% with messages = get_flashed_messages(with_categories=True) %}
-    {% if messages %}
-    <div class="flash-container">
-        {% for category, message in messages %}
-        <div class="flash-message {{ category }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="navbar-brand">SECURO</a>
+        <div class="navbar-links">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('scan') }}">Сканнер</a>
+                <a href="{{ url_for('profile') }}">Профиль</a>
+                <form action="{{ url_for('logout') }}" method="POST" style="display: inline-block;">
+                    <button type="submit" style="background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0;">Выход</button>
+                </form>
+            {% else %}
+                <a href="{{ url_for('login') }}">Войти</a>
+            {% endif %}
+        </div>
+    </nav>
     {% block body %}{% endblock %}
+
+    <div id="toast-container" aria-live="polite"
+         data-messages="{{ get_flashed_messages(with_categories=true) | tojson }}"></div>
+
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var fc = document.querySelector('.flash-container');
-        if (fc) {
-            setTimeout(function() {
-                fc.style.transition = 'opacity 0.5s ease';
-                fc.style.opacity = '0';
-                setTimeout(function() { fc.remove(); }, 500);
-            }, 5000);
+    (function () {
+        const container = document.getElementById('toast-container');
+
+        function createToast(category, message) {
+            const toast = document.createElement('div');
+            const icons = { error: '✖', success: '✔', warning: '⚠', message: '◈' };
+            const icon = icons[category] || icons['message'];
+            toast.className = 'toast toast-' + category;
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-text">${message}</span>
+                <button class="toast-close" aria-label="Закрыть">✕</button>
+            `;
+            toast.querySelector('.toast-close').addEventListener('click', () => dismiss(toast));
+            container.appendChild(toast);
+
+            const timer = setTimeout(() => dismiss(toast), 4000);
+            toast._timer = timer;
+            return toast;
         }
-    });
+
+        function dismiss(toast) {
+            clearTimeout(toast._timer);
+            toast.classList.add('toast-hide');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        }
+
+        var raw = container.getAttribute('data-messages');
+        if (raw && raw !== '[]') {
+            try {
+                JSON.parse(raw).forEach(function (item) {
+                    createToast(item[0], item[1]);
+                });
+            } catch (e) {}
+        }
+
+        window.showToast = createToast;
+    })();
+
+    (function () {
+        function initTypewriter(h1) {
+            var text = (h1.innerText || h1.textContent || '').trim();
+            if (!text) return;
+
+            h1.innerHTML = '<span class="type-cursor">&#x2588;</span>';
+            var cursor = h1.querySelector('.type-cursor');
+
+            var i = 0;
+            setTimeout(function () {
+                var interval = setInterval(function () {
+                    if (i < text.length) {
+                        h1.insertBefore(document.createTextNode(text[i]), cursor);
+                        i++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 160);
+            }, 300);
+        }
+
+        document.querySelectorAll('h1').forEach(initTypewriter);
+    })();
+
     </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileName = document.getElementById('fileName');
     const fileRemoveBtn = document.getElementById('fileRemoveBtn');
     const dropZoneContent = document.getElementById('dropZoneContent');
+    const scanForm = document.getElementById('scanForm');
 
     if (!dropZone || !fileInput) return;
 
@@ -88,14 +89,18 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Индикатор загрузки при отправке формы
-    const scanForm = document.getElementById('scanForm');
     if (scanForm) {
-        scanForm.addEventListener('submit', function() {
-            const submitBtn = scanForm.querySelector('input[type="submit"]');
+        scanForm.addEventListener('submit', function () {
+            const submitBtn = scanForm.querySelector('input[type="submit"], button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.value = 'Сканирование...';
-                submitBtn.style.opacity = '0.6';
+                submitBtn.dataset.originalText = submitBtn.value || submitBtn.textContent;
+                if (submitBtn.tagName === 'INPUT') {
+                    submitBtn.value = '⏳ Сканирование...';
+                } else {
+                    submitBtn.textContent = '⏳ Сканирование...';
+                }
+                submitBtn.style.opacity = '0.7';
                 submitBtn.style.cursor = 'wait';
             }
         });

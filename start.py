@@ -1,7 +1,6 @@
 # Импорты
 from app import app, db
 
-
 def init_db():
     """Инициализация базы данных"""
     with app.app_context():

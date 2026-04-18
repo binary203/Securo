@@ -180,7 +180,8 @@ async function sendMessage() {
         const requestData = {
             user_command: userCommand,
             AI_lang: currentLanguage,
-            code_snippet: codeSnippetToSend 
+            code_snippet: codeSnippetToSend,
+            history: conversationHistory.slice(-5)
         };
         
         // Отправка запроса к API
@@ -219,6 +220,13 @@ async function sendMessage() {
         sendBtn.disabled = false;
         chatInput.focus();
     }
+}
+
+// HTML-экранирование для защиты от XSS
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function addMessage(text, type) {
@@ -262,7 +270,6 @@ function addMessage(text, type) {
         span.innerHTML = span.innerHTML.replace(/\n/g, '<br>');
         content.appendChild(span);
     }
-    
     const time = document.createElement('div');
     time.className = 'message-time';
     time.textContent = new Date().toLocaleTimeString('ru-RU', { 
