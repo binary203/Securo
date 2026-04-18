@@ -29,7 +29,7 @@
     {% block body %}{% endblock %}
 
     <div id="toast-container" aria-live="polite"
-         data-messages="{{ get_flashed_messages(with_categories=true) | tojson }}"></div>
+         data-messages='{{ get_flashed_messages(with_categories=true) | tojson }}'></div>
 
     <script>
     (function () {
