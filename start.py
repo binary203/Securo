@@ -1,6 +1,7 @@
 # Импорты
 from app import app, db
 
+
 def init_db():
     """Инициализация базы данных"""
     with app.app_context():
@@ -16,6 +17,9 @@ def init_db():
         print("Существующие таблицы:", tables)
 
 
+# Инициализация БД при любом способе запуска (python start.py ИЛИ gunicorn start:app)
+init_db()
+
+
 if __name__ == "__main__":
-    init_db()
     app.run()
