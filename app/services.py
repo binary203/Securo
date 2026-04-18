@@ -23,10 +23,17 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(_APP_DIR, os.pardir))
 _DEFAULT_LOCAL_RULESET = os.path.join(_APP_DIR, "semgrep_rules", "default.yml")
 
 from google import genai
-gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) if os.getenv("GEMINI_API_KEY") else None
+
+gemini_client = (
+    genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    if os.getenv("GEMINI_API_KEY")
+    else None
+)
 
 
-def run_LLM(user_command: str, AI_lang: str, code_snippet: str, history: list | None = None) -> str:
+def run_LLM(
+    user_command: str, AI_lang: str, code_snippet: str, history: list | None = None
+) -> str:
     MAX_CODE_LENGTH = 10000
 
     # Валидация входных данных
@@ -108,8 +115,8 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str, history: list | 
 
     try:
         if not gemini_client:
-             raise RuntimeError("ОШИБКА: Не задан GEMINI_API_KEY в переменных окружения")
-        
+            raise RuntimeError("ОШИБКА: Не задан GEMINI_API_KEY в переменных окружения")
+
         contents = [system_prompt]
         if history and isinstance(history, list):
             for entry in history[-5:]:
@@ -118,12 +125,11 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str, history: list | 
                         contents.append(f"User: {entry['user']}")
                     if entry.get("ai"):
                         contents.append(f"Assistant: {entry['ai']}")
-        
+
         contents.append(prompt)
-        
+
         response = gemini_client.models.generate_content(
-            model=LLM_MODEL,
-            contents=contents
+            model=LLM_MODEL, contents=contents
         )
 
         return response.text or ""
@@ -131,7 +137,11 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str, history: list | 
     except Exception as e:
         if "timeout" in str(e).lower() or "timed out" in str(e).lower():
             raise RuntimeError("Превышено время ожидания ответа от LLM.")
-        elif "quota" in str(e).lower() or "429" in str(e).lower() or "rate limit" in str(e).lower():
+        elif (
+            "quota" in str(e).lower()
+            or "429" in str(e).lower()
+            or "rate limit" in str(e).lower()
+        ):
             raise RuntimeError("Превышен лимит запросов к LLM API. Попробуйте позже.")
         else:
             raise RuntimeError(f"Ошибка вызова LLM: {str(e)}")
@@ -251,7 +261,6 @@ class SemgrepCLIService:
             if os.path.exists(venv_semgrep):
                 possible_paths.append(venv_semgrep)
 
-        # Убираем дубликаты, сохраняя порядок
         seen = set()
         unique_paths = []
         for p in possible_paths:
@@ -260,26 +269,11 @@ class SemgrepCLIService:
                 unique_paths.append(p)
 
         for path in unique_paths:
-            try:
-                result = subprocess.run(
-                    [path, "--version"],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                    env=cls._get_env(),
-                )
-                if (
-                    result.returncode == 0
-                    or "semgrep" in result.stdout.lower()
-                    or "semgrep" in result.stderr.lower()
-                ):
-                    cls._semgrep_path = path
-                    logger.info("Semgrep найден: %s", path)
-                    return cls._semgrep_path
-            except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-                continue
+            if os.path.isfile(path) or shutil.which(path):
+                cls._semgrep_path = path
+                logger.info("Semgrep найден: %s", path)
+                return cls._semgrep_path
 
-        # НЕ используем python -m semgrep — устарел с версии 1.38
         cls._semgrep_path = ""
         return None
 
@@ -548,7 +542,8 @@ class SemgrepCLIService:
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
                     logger.warning(
                         "Ошибка с правилами '%s'. Переключение на fallback: %s",
-                        self.ruleset, self.fallback_ruleset,
+                        self.ruleset,
+                        self.fallback_ruleset,
                     )
                     logger.debug("Текст ошибки: %s", e)
                     semgrep_json = self._run_semgrep_json(
@@ -624,12 +619,13 @@ class SemgrepCLIService:
                 if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
                     logger.warning(
                         "Ошибка с правилами '%s'. Переключение на fallback: %s",
-                        self.ruleset, self.fallback_ruleset,
+                        self.ruleset,
+                        self.fallback_ruleset,
                     )
                     try:
                         err_data = json.loads(scan.stdout)
                         for err in err_data.get("errors", []):
-                            logger.warning("Semgrep API Error: %s", err.get('message'))
+                            logger.warning("Semgrep API Error: %s", err.get("message"))
                     except json.JSONDecodeError:
                         logger.debug("Ошибка Semgrep (stderr): %s", scan.stderr)
                         logger.debug("Ошибка Semgrep (stdout): %s", scan.stdout)
@@ -697,7 +693,8 @@ class SemgrepCLIService:
             if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
                 logger.warning(
                     "Ошибка с правилами '%s'. Переключение на fallback: %s",
-                    self.ruleset, self.fallback_ruleset,
+                    self.ruleset,
+                    self.fallback_ruleset,
                 )
                 logger.debug("Текст ошибки: %s", e)
                 semgrep_json = self._run_semgrep_json(file_path, self.fallback_ruleset)
