@@ -223,14 +223,24 @@ class SemgrepCLIService:
         if path:
             possible_paths.append(path)
 
+        # Глобальный путь в Docker / Linux
+        if os.path.exists("/usr/local/bin/semgrep"):
+            possible_paths.append("/usr/local/bin/semgrep")
+
         if os.name == "nt":
             local_venv_semgrep = os.path.join(
                 _PROJECT_ROOT, ".venv", "Scripts", "semgrep.exe"
             )
+            local_venv_semgrep2 = os.path.join(
+                _PROJECT_ROOT, "venv", "Scripts", "semgrep.exe"
+            )
         else:
             local_venv_semgrep = os.path.join(_PROJECT_ROOT, ".venv", "bin", "semgrep")
+            local_venv_semgrep2 = os.path.join(_PROJECT_ROOT, "venv", "bin", "semgrep")
         if os.path.exists(local_venv_semgrep):
             possible_paths.append(local_venv_semgrep)
+        if os.path.exists(local_venv_semgrep2):
+            possible_paths.append(local_venv_semgrep2)
 
         if hasattr(sys, "prefix") and sys.prefix != sys.base_prefix:
             if os.name == "nt":  # Windows
@@ -241,7 +251,15 @@ class SemgrepCLIService:
             if os.path.exists(venv_semgrep):
                 possible_paths.append(venv_semgrep)
 
-        for path in possible_paths:
+        # Убираем дубликаты, сохраняя порядок
+        seen = set()
+        unique_paths = []
+        for p in possible_paths:
+            if p not in seen:
+                seen.add(p)
+                unique_paths.append(p)
+
+        for path in unique_paths:
             try:
                 result = subprocess.run(
                     [path, "--version"],
@@ -256,28 +274,12 @@ class SemgrepCLIService:
                     or "semgrep" in result.stderr.lower()
                 ):
                     cls._semgrep_path = path
+                    logger.info("Semgrep найден: %s", path)
                     return cls._semgrep_path
             except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
                 continue
 
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "semgrep", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                env=cls._get_env(),
-            )
-            if (
-                result.returncode == 0
-                or "semgrep" in result.stdout.lower()
-                or "semgrep" in result.stderr.lower()
-            ):
-                cls._semgrep_path = [sys.executable, "-m", "semgrep"]
-                return cls._semgrep_path
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
+        # НЕ используем python -m semgrep — устарел с версии 1.38
         cls._semgrep_path = ""
         return None
 
