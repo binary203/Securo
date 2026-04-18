@@ -1,2 +1,7 @@
 **/__pycache__
 **/.env
+venv/
+.venv/
+instance/
+local_temp/
+*.db

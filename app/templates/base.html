@@ -4,11 +4,36 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
     <title>Securo — Your Code is safe!</title>
     {% block head %}{% endblock %}
 </head>
 <body>
+    <div class="brand">Securo</div>
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+    <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-message {{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
     {% block body %}{% endblock %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var fc = document.querySelector('.flash-container');
+        if (fc) {
+            setTimeout(function() {
+                fc.style.transition = 'opacity 0.5s ease';
+                fc.style.opacity = '0';
+                setTimeout(function() { fc.remove(); }, 500);
+            }, 5000);
+        }
+    });
+    </script>
 </body>
 </html>

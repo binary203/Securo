@@ -4,32 +4,34 @@
 {% endblock %}
 
 {% block body %}
-  <div class="container">
+<div class="container">
     <h1>WHO AM I?</h1>
-    {% for message in get_flashed_messages() %}
-        <p style="color:red;text-align:center">{{ message }}</p>
-    {% endfor %}
+
+
+    
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
-        <div>
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}
+        
+        <div class="form-group">
+            {{ form.username.label }}
+            {{ form.username(size=32, placeholder="Введите имя пользователя") }}
         </div>
-        <br>
-        <div>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
+        
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(size=32, placeholder="Введите пароль") }}
         </div>
-        <br>
-        <div>
-            {{ form.remember_me() }} {{ form.remember_me.label }}
+        
+        <div class="form-group" style="display: flex; align-items: center;">
+            {{ form.remember_me() }}
+            {{ form.remember_me.label }}
         </div>
-        <br>
-        <div>
+        
+        <div class="form-group">
             {{ form.submit() }}
         </div>
-        <br>
     </form>
+    
     <a href="{{ url_for('registration') }}">Нет аккаунта? Зарегистрироваться</a>
-  </div>
+</div>
 {% endblock %}

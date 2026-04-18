@@ -1,11 +1,25 @@
 FROM python:3.14-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-COPY requirements.txt .
-RUN apt-get update && apt-get install -y build-essential git && \
-    pip install --no-cache-dir -r requirements.txt && \
-    apt-get remove -y build-essential && apt-get autoremove -y
-COPY . .
+COPY requirements.txt /app/
 
-CMD ["python", "start.py"]
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN pip install semgrep
+
+COPY . /app/
+
+EXPOSE 5000
+
+ENV FLASK_APP=start.py
+ENV FLASK_CONFIG=production
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "start:app"]

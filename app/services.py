@@ -1,6 +1,5 @@
 from .models import db, Scans, Vulnerability, User
 from .LANG_PATTERNS import LANG_PATTERNS
-from openai import OpenAI
 from dotenv import load_dotenv
 import subprocess
 import tempfile
@@ -13,16 +12,14 @@ import certifi
 
 load_dotenv(override=True)
 
-LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
 
 _APP_DIR = os.path.abspath(os.path.dirname(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_APP_DIR, os.pardir))
 _DEFAULT_LOCAL_RULESET = os.path.join(_APP_DIR, "semgrep_rules", "default.yml")
 
-LLM_client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=os.getenv("HF_TOKEN"),
-)
+from google import genai
+gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) if os.getenv("GEMINI_API_KEY") else None
 
 
 def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
@@ -106,21 +103,20 @@ def run_LLM(user_command: str, AI_lang: str, code_snippet: str) -> str:
     prompt = f"""Task: {task}. Code:\n{code_snippet}"""
 
     try:
-        completion = LLM_client.chat.completions.create(
+        if not gemini_client:
+             raise RuntimeError("ОШИБКА: Не задан GEMINI_API_KEY в переменных окружения")
+        
+        response = gemini_client.models.generate_content(
             model=LLM_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt},
-            ],
-            timeout=120,
+            contents=[system_prompt, prompt]
         )
 
-        return completion.choices[0].message.content or ""
+        return response.text or ""
 
     except Exception as e:
         if "timeout" in str(e).lower() or "timed out" in str(e).lower():
-            raise RuntimeError("Превышено время ожидания ответа от LLM (120 секунд).")
-        elif "rate limit" in str(e).lower():
+            raise RuntimeError("Превышено время ожидания ответа от LLM.")
+        elif "quota" in str(e).lower() or "429" in str(e).lower() or "rate limit" in str(e).lower():
             raise RuntimeError("Превышен лимит запросов к LLM API. Попробуйте позже.")
         else:
             raise RuntimeError(f"Ошибка вызова LLM: {str(e)}")
