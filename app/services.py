@@ -9,8 +9,6 @@ import tempfile
 
 import certifi
 from dotenv import load_dotenv
-from openai import OpenAI
-
 from .LANG_PATTERNS import LANG_PATTERNS
 from .models import db, Scans, Vulnerability, User
 
