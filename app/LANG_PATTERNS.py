@@ -1,4 +1,4 @@
-# Паттерны языков
+# таблица из характерных паттернов для языков
 LANG_PATTERNS = {
     "python": [
         r"\bdef\s+\w+\s*\(", r"\bclass\s+\w+(?:\(.*\))?:", r"\bimport\s+[\w\.]+", r"\bfrom\s+[\w\.]+\s+import\b",

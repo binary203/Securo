@@ -3,6 +3,7 @@ let currentLanguage = 'ru';
 let attachedCode = null;
 let conversationHistory = [];
 
+
 // Элементы интерфейса
 const overlay = document.getElementById('overlay');
 const chatContainer = document.getElementById('chatContainer');
@@ -231,14 +232,36 @@ function addMessage(text, type) {
     const content = document.createElement('div');
     content.className = 'message-content';
     
-    // Форматирование блоков кода
-    let formattedText = text;
-    if (formattedText.includes('```')) {
-        formattedText = formattedText.replace(/```(\w+)?\n([\s\S]*?)```/g, 
-            '<pre><code>$2</code></pre>');
+    // Безопасное форматирование: DOM-элементы вместо innerHTML
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            const textBefore = text.substring(lastIndex, match.index);
+            const span = document.createElement('span');
+            span.textContent = textBefore;
+            span.innerHTML = span.innerHTML.replace(/\n/g, '<br>');
+            content.appendChild(span);
+        }
+        
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.textContent = match[2];
+        pre.appendChild(code);
+        content.appendChild(pre);
+        
+        lastIndex = match.index + match[0].length;
     }
     
-    content.innerHTML = formattedText.replace(/\n/g, '<br>');
+    if (lastIndex < text.length) {
+        const remaining = text.substring(lastIndex);
+        const span = document.createElement('span');
+        span.textContent = remaining;
+        span.innerHTML = span.innerHTML.replace(/\n/g, '<br>');
+        content.appendChild(span);
+    }
     
     const time = document.createElement('div');
     time.className = 'message-time';
@@ -267,5 +290,4 @@ function showError(message) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('AI Chat initialized');
 });
-
 

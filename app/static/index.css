@@ -365,6 +365,33 @@ textarea::placeholder {
     border-radius: 8px;
 }
 
+.flash-container {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 420px;
+}
+
+.flash-container .flash-message {
+    background: rgba(255, 51, 51, 0.15);
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s ease-out;
+    margin: 0;
+}
+
+.flash-container .flash-message.success {
+    background: rgba(0, 255, 65, 0.1);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
 .success-message strong {
     display: block;
     font-size: 1.25rem;
@@ -477,6 +504,8 @@ textarea::placeholder {
     font-size: 0.8rem;
     color: var(--text-secondary);
     margin-bottom: 0.75rem;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 .vulnerability-description {
@@ -717,7 +746,7 @@ h1:hover {
     }
 }
 
-/* LLM /*
+/* LLM */
 /* Оверлей чата */
 #overlay {
     display: none;

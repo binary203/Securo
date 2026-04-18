@@ -51,7 +51,8 @@ def registration():
 
     if form.validate_on_submit():
         if User.query.filter_by(username=form.username.data).first():
-            return render_template(url_for("registration"))
+            flash("Пользователь с таким именем уже существует")
+            return render_template("register.html", form=form)
 
         new_user = User(username=form.username.data)
         new_user.set_password(password=form.password.data)
@@ -60,7 +61,8 @@ def registration():
         db.session.commit()
 
         login_user(new_user)
-        return redirect("/")
+        flash("Регистрация прошла успешно!", "success")
+        return redirect(url_for("profile"))
 
     return render_template("register.html", form=form)
 
@@ -179,7 +181,7 @@ def results():
 
 
 # Выход
-@app.route("/profile/logout")
+@app.route("/profile/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()

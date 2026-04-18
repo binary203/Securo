@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!dropZone || !fileInput) return;
 
     dropZone.addEventListener('click', function (e) {
-        if (e.target !== fileRemoveBtn) {
+        if (e.target !== fileRemoveBtn && e.target !== fileInput) {
             fileInput.click();
         }
     });
@@ -44,21 +44,36 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleDrop(e) {
         const dt = e.dataTransfer;
         const files = dt.files;
-
-        if (files.length > 0) {
-            fileInput.files = files;
-            updateFileInfo(files[0]);
-        }
+        handleFiles(files);
     }
 
     fileInput.addEventListener('change', function () {
-        if (this.files.length > 0) {
-            updateFileInfo(this.files[0]);
-        }
+        handleFiles(this.files);
     });
 
-    function updateFileInfo(file) {
-        fileName.textContent = file.name;
+    function handleFiles(files) {
+        if (files.length > 0) {
+            if (fileInput.files !== files) {
+                fileInput.files = files;
+            }
+            
+            if (files.length > 5) {
+                alert("Максимум 5 файлов.");
+                fileInput.value = "";
+                return;
+            }
+
+            updateFileInfo(files);
+        }
+    }
+
+    function updateFileInfo(files) {
+        if (files.length === 1) {
+            fileName.textContent = files[0].name;
+        } else {
+            fileName.textContent = `Выбрано файлов: ${files.length}`;
+        }
+        
         dropZoneContent.style.display = 'none';
         fileInfo.style.display = 'flex';
     }
@@ -71,78 +86,18 @@ document.addEventListener('DOMContentLoaded', function () {
             fileInfo.style.display = 'none';
         });
     }
-});
-document.addEventListener('DOMContentLoaded', function () {
-    const dropZone = document.getElementById('fileDropZone');
-    const fileInput = document.getElementById('fileInput');
-    const fileInfo = document.getElementById('fileInfo');
-    const fileName = document.getElementById('fileName');
-    const fileRemoveBtn = document.getElementById('fileRemoveBtn');
-    const dropZoneContent = document.getElementById('dropZoneContent');
 
-    if (!dropZone || !fileInput) return;
-
-    dropZone.addEventListener('click', function (e) {
-        if (e.target !== fileRemoveBtn) {
-            fileInput.click();
-        }
-    });
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-        dropZone.classList.add('dragover');
-    }
-
-    function unhighlight() {
-        dropZone.classList.remove('dragover');
-    }
-
-    dropZone.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-
-        if (files.length > 0) {
-            fileInput.files = files;
-            updateFileInfo(files[0]);
-        }
-    }
-
-    fileInput.addEventListener('change', function () {
-        if (this.files.length > 0) {
-            updateFileInfo(this.files[0]);
-        }
-    });
-
-    function updateFileInfo(file) {
-        fileName.textContent = file.name;
-        dropZoneContent.style.display = 'none';
-        fileInfo.style.display = 'flex';
-    }
-
-    if (fileRemoveBtn) {
-        fileRemoveBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            fileInput.value = '';
-            dropZoneContent.style.display = 'block';
-            fileInfo.style.display = 'none';
+    // Индикатор загрузки при отправке формы
+    const scanForm = document.getElementById('scanForm');
+    if (scanForm) {
+        scanForm.addEventListener('submit', function() {
+            const submitBtn = scanForm.querySelector('input[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.value = 'Сканирование...';
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'wait';
+            }
         });
     }
 });

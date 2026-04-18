@@ -1,8 +1,6 @@
 # Импорты
 from app import app, db
 
-app.config.from_object("config.DevelopmentConfig")
-
 
 def init_db():
     """Инициализация базы данных"""
