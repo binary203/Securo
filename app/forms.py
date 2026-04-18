@@ -10,13 +10,11 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Optional, Length, EqualTo, Regexp
 
-
 class LoginForm(FlaskForm):
     username = StringField("Имя", validators=[DataRequired(), Length(min=3, max=32)])
     password = PasswordField("Пароль", validators=[DataRequired()])
     remember_me = BooleanField("Запомнить меня")
     submit = SubmitField("Войти")
-
 
 class RegistrationForm(FlaskForm):
     username = StringField(
@@ -41,7 +39,6 @@ class RegistrationForm(FlaskForm):
         ],
     )
     submit = SubmitField("Зарегистрироваться")
-
 
 class ScanForm(FlaskForm):
     code = TextAreaField("Code", validators=[Optional(), Length(max=10000)])
