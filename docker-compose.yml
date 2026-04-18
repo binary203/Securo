@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=start.py
+      - FLASK_CONFIG=production
+      - SEMGREP_APP_TOKEN=7c3324e9315e7d0f29618070d3af2063d3a244678025831afdd20c27e34dd87d
+      - SECRET_KEY=XP;W/\vD*BOQ_ieHYfEl1GJ!2}Z5[?S:A.7ykd6nL3c8qwpN+$bjt])MV#0z
+      - SEMGREP_RULESET=p/default
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-YOUR_GEMINI_API_KEY}
+    volumes:
+      - ./instance:/app/instance

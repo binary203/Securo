@@ -1,13 +1,9 @@
-# Импорты
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import app, db, login_manager
 
-
-# юзеры для авторизации, если отменяем ее то делитнуть
 class User(db.Model, UserMixin):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -27,14 +23,11 @@ class User(db.Model, UserMixin):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-
-# Загрузка юзера
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-# сканы для подачи кода в сайт и запуска анализа коода юзера
 class Scans(db.Model):
     __tablename__ = "scans"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -46,7 +39,6 @@ class Scans(db.Model):
     code = db.Column(db.Text, nullable=False)
 
 
-# найденные уязвимости для вывода результатов
 class Vulnerability(db.Model):
     __tablename__ = "vulnerabilities"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

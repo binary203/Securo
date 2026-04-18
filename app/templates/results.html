@@ -8,9 +8,10 @@
 <div class="text">
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
-        <!-- Кнопка LLM-помощи-->
-        <div style="margin-bottom: 2rem;">
+        <!-- Кнопки -->
+        <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
             <button id="AiAssist">🤖 ИИ-Ассистент</button>
+            <button id="exportJson" class="btn-outline">📥 Скачать JSON</button>
         </div>
         <!-- Результаты сканирования-->
         {% if result %}
@@ -194,5 +195,19 @@
     </div>
 </div>
 
+<script>
+    var scanResultData = {{ result | tojson }};
+</script>
+<script>
+    document.getElementById('exportJson').addEventListener('click', function () {
+        var blob = new Blob([JSON.stringify(scanResultData, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'securo_scan_' + new Date().toISOString().slice(0, 10) + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+</script>
 <script src="{{ url_for('static', filename='ai.js') }}"></script>
 {% endblock %}

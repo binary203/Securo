@@ -5,20 +5,36 @@
 
 {% block body %}
 <div class="container">
-    <h1>PROFILE</h1>
-    
-    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-        Пользователь: <strong style="color: var(--text-primary);">{{ current_user.username }}</strong>
-    </p>
-    
-    <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px;">
-        <form action="{{ url_for('scan') }}" method="GET">
-            <button type="submit" style="width: 100%;">Сканирование</button>
-        </form>
-        
-        <form action="{{ url_for('logout') }}" method="POST">
-            <button type="submit" class="btn-outline" style="width: 100%; margin-top: 1rem;">Выйти</button>
-        </form>
+    <h1>ПРОФИЛЬ</h1>
+
+    <div class="profile-card">
+        <div class="profile-info">
+            <div class="profile-row">
+                <span class="profile-label">Пользователь</span>
+                <span class="profile-value">{{ current_user.username }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Дата регистрации</span>
+                <span class="profile-value">{{ current_user.date_created.strftime('%d.%m.%Y') }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Всего сканирований</span>
+                <span class="profile-value">{{ scan_count }}</span>
+            </div>
+            <div class="profile-row">
+                <span class="profile-label">Найдено уязвимостей</span>
+                <span class="profile-value">{{ vuln_count }}</span>
+            </div>
+        </div>
+
+        <div class="profile-actions" style="display: flex; gap: 1rem; width: 100%;">
+            <form action="{{ url_for('scan') }}" method="GET" style="flex: 1;">
+                <button type="submit" style="width: 100%;">🔍 Новое сканирование</button>
+            </form>
+            <form action="{{ url_for('logout') }}" method="POST" style="flex: 1;">
+                <button type="submit" class="btn-outline" style="width: 100%;">Выйти</button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

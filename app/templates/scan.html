@@ -6,8 +6,6 @@
 {% block body %}
 <div class="container" style="padding: 2rem;">
     <h1>SECURO SCANNER</h1>
-
-
     
     <form method="post" action="{{ url_for('scan') }}" enctype="multipart/form-data" id="scanForm" style="max-width: 500px;">
         {{ form.hidden_tag() }}
