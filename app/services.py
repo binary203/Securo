@@ -398,52 +398,60 @@ class SemgrepCLIService:
 
     def _run_semgrep_json(self, target: str, ruleset: str) -> dict:
         logger.debug("Запуск Semgrep с набором правил: %s", ruleset)
-        result = subprocess.run(
-            self._semgrep_cmd
-            + [
-                "--config",
-                ruleset,
-                "--max-memory",
-                "300",
-                "--json",
-                target,
-            ],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=600,
-            env=self._get_env(),
-        )
-
-        if result.returncode != 0:
-            try:
-                err_data = json.loads(result.stdout)
-                if "errors" in err_data and err_data["errors"]:
-                    error_msg = "; ".join(
-                        [e.get("message", "Unknown error") for e in err_data["errors"]]
-                    )
-                else:
-                    error_msg = (result.stderr or result.stdout or "").strip()
-            except (json.JSONDecodeError, TypeError):
-                error_msg = (result.stderr or result.stdout or "").strip()
-
-            if "401" in error_msg:
-                error_msg += " [HINT: Проверьте SEMGREP_APP_TOKEN в .env. Если он неверный, удалите переменную.]"
-
-            if error_msg == "":
-                error_msg = (
-                    "Semgrep завершился с ошибкой без текста. "
-                    "Частая причина: недоступен ruleset или проблемы сети/прокси."
-                )
-            raise RuntimeError(
-                f"Ошибка сканирования (код {result.returncode}): {error_msg}"
-            )
+        
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp_file:
+            tmp_json_path = tmp_file.name
 
         try:
-            return json.loads(result.stdout)
-        except json.JSONDecodeError:
-            raise RuntimeError(f"Ошибка парсинга результатов: {result.stdout[:200]}")
+            result = subprocess.run(
+                self._semgrep_cmd
+                + [
+                    "--config",
+                    ruleset,
+                    "--max-memory",
+                    "300",
+                    "--json",
+                    "--output",
+                    tmp_json_path,
+                    target,
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=600,
+                env=self._get_env(),
+            )
+
+            if result.returncode != 0:
+                error_msg = (result.stderr or result.stdout or "").strip()
+                # Попробуем извлечь ошибки из JSON файла, если он создался
+                if os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0:
+                    try:
+                        with open(tmp_json_path, "r", encoding="utf-8") as f:
+                            err_data = json.load(f)
+                            if "errors" in err_data and err_data["errors"]:
+                                error_msg = "; ".join(
+                                    [e.get("message", "Unknown error") for e in err_data["errors"]]
+                                )
+                    except Exception:
+                        pass
+
+                if "401" in error_msg:
+                    error_msg += " [HINT: Проверьте SEMGREP_APP_TOKEN в .env. Если он неверный, удалите переменную.]"
+                if error_msg == "":
+                    error_msg = "Semgrep завершился с ошибкой без текста. Частая причина: недоступен ruleset или проблемы сети/прокси."
+                
+                raise RuntimeError(f"Ошибка сканирования (код {result.returncode}): {error_msg}")
+
+            if not os.path.exists(tmp_json_path) or os.path.getsize(tmp_json_path) == 0:
+                raise RuntimeError(f"Semgrep не создал файл с результатами. stdout: {result.stdout[:200]}")
+
+            with open(tmp_json_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        finally:
+            if os.path.exists(tmp_json_path):
+                os.remove(tmp_json_path)
 
     # удаление комментарие и строк
     def _code_cleaner(self, code: str) -> str:
@@ -575,10 +583,10 @@ class SemgrepCLIService:
             repo_dir = os.path.join(tmpdir, "repo")
 
             clone = subprocess.run(
-                [git_path, "clone", "--depth", "1", repo_url, repo_dir],
+                [git_path, "clone", "--depth", "1", "--single-branch", "--no-tags", repo_url, repo_dir],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=120,
             )
 
             if clone.returncode != 0:
@@ -586,70 +594,85 @@ class SemgrepCLIService:
                     f"Ошибка клонирования: {clone.stderr or clone.stdout}"
                 )
 
-            logger.debug("Запуск Semgrep (repo) с набором правил: %s", self.ruleset)
-            scan = subprocess.run(
-                self._semgrep_cmd
-                + [
-                    "--config",
-                    self.ruleset,
-                    "--max-memory",
-                    "300",
-                    "--json",
-                    "--exclude",
-                    "test/",
-                    "--exclude",
-                    "tests/",
-                    "--exclude",
-                    "*.min.js",
-                    "--exclude",
-                    "*.test.js",
-                    "--exclude",
-                    "*.spec.js",
-                    repo_dir,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=1200,
-                encoding="utf-8",
-                errors="replace",
-                env=self._get_env(),
-            )
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp_file:
+                tmp_json_path = tmp_file.name
 
-            if scan.returncode != 0:
-                if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
-                    logger.warning(
-                        "Ошибка с правилами '%s'. Переключение на fallback: %s",
-                        self.ruleset,
-                        self.fallback_ruleset,
-                    )
-                    try:
-                        err_data = json.loads(scan.stdout)
-                        for err in err_data.get("errors", []):
-                            logger.warning("Semgrep API Error: %s", err.get("message"))
-                    except json.JSONDecodeError:
-                        logger.debug("Ошибка Semgrep (stderr): %s", scan.stderr)
-                        logger.debug("Ошибка Semgrep (stdout): %s", scan.stdout)
-                    semgrep_json = self._run_semgrep_json(
-                        repo_dir, self.fallback_ruleset
-                    )
-                    return self._hydrate_result_snippets(
-                        semgrep_json, base_dir=repo_dir
-                    )
-
-                error_msg = (scan.stderr or scan.stdout or "").strip()
-                if error_msg == "":
-                    error_msg = (
-                        "Semgrep завершился с ошибкой без текста. "
-                        "Частая причина: недоступен ruleset (например, semgrep.dev) или проблемы сети/прокси."
-                    )
-                raise RuntimeError(
-                    f"Ошибка сканирования (код {scan.returncode}): {error_msg}"
-                )
             try:
-                semgrep_json = json.loads(scan.stdout)
-                return self._hydrate_result_snippets(semgrep_json, base_dir=repo_dir)
-            except json.JSONDecodeError:
-                raise RuntimeError(f"Ошибка парсинга результатов: {scan.stdout[:200]}")
+                logger.debug("Запуск Semgrep (repo) с набором правил: %s", self.ruleset)
+                scan = subprocess.run(
+                    self._semgrep_cmd
+                    + [
+                        "--config",
+                        self.ruleset,
+                        "--max-memory",
+                        "300",
+                        "--json",
+                        "--output",
+                        tmp_json_path,
+                        "--exclude",
+                        "test/",
+                        "--exclude",
+                        "tests/",
+                        "--exclude",
+                        "*.min.js",
+                        "--exclude",
+                        "*.test.js",
+                        "--exclude",
+                        "*.spec.js",
+                        repo_dir,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=1200,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=self._get_env(),
+                )
+
+                if scan.returncode != 0:
+                    if self.fallback_ruleset and self.ruleset != self.fallback_ruleset:
+                        logger.warning(
+                            "Ошибка с правилами '%s'. Переключение на fallback: %s",
+                            self.ruleset,
+                            self.fallback_ruleset,
+                        )
+                        try:
+                            if os.path.exists(tmp_json_path) and os.path.getsize(tmp_json_path) > 0:
+                                with open(tmp_json_path, "r", encoding="utf-8") as f:
+                                    err_data = json.load(f)
+                                    for err in err_data.get("errors", []):
+                                        logger.warning("Semgrep API Error: %s", err.get("message"))
+                        except (json.JSONDecodeError, Exception):
+                            logger.debug("Ошибка Semgrep (stderr): %s", scan.stderr)
+                            logger.debug("Ошибка Semgrep (stdout): %s", scan.stdout)
+                        
+                        semgrep_json = self._run_semgrep_json(
+                            repo_dir, self.fallback_ruleset
+                        )
+                        return self._hydrate_result_snippets(
+                            semgrep_json, base_dir=repo_dir
+                        )
+
+                    error_msg = (scan.stderr or scan.stdout or "").strip()
+                    if error_msg == "":
+                        error_msg = (
+                            "Semgrep завершился с ошибкой без текста. "
+                            "Частая причина: недоступен ruleset (например, semgrep.dev) или проблемы сети/прокси."
+                        )
+                    raise RuntimeError(
+                        f"Ошибка сканирования (код {scan.returncode}): {error_msg}"
+                    )
+                try:
+                    if not os.path.exists(tmp_json_path) or os.path.getsize(tmp_json_path) == 0:
+                         raise RuntimeError(f"JSON пуст. stdout: {scan.stdout[:200]}")
+                    with open(tmp_json_path, "r", encoding="utf-8") as f:
+                        semgrep_json = json.load(f)
+                    return self._hydrate_result_snippets(semgrep_json, base_dir=repo_dir)
+                except json.JSONDecodeError:
+                    raise RuntimeError(f"Ошибка парсинга результатов: {scan.stdout[:200]}")
+            finally:
+                if os.path.exists(tmp_json_path):
+                    os.remove(tmp_json_path)
 
     # публичный метод для сканирования репозитория
     def run_repo_scan(self, repo_url: str) -> dict:
