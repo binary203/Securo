@@ -1,15 +1,22 @@
 # Импорты
 from app import app, db, limiter
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, login_user, current_user, logout_user
 from .models import User, Scans, Vulnerability
 import sqlalchemy as sql
-from .forms import LoginForm, ScanForm, RegistrationForm
+from .forms import LoginForm, ScanForm, RegistrationForm, LogoutForm
 from .services import run_service, run_LLM
 from werkzeug.utils import secure_filename
 import tempfile
 import os
 import shutil
+import json
+
+
+# Форма для CSRF токена на глобальных кнопках выхода
+@app.context_processor
+def inject_logout_form():
+    return {"logout_form": LogoutForm()}
 
 
 # Индекс страница
@@ -23,14 +30,28 @@ def index():
 @login_required
 def profile():
     scan_count = Scans.query.filter_by(user_id=current_user.id).count()
-    vuln_count = (
+    vuln_base = (
         db.session.query(Vulnerability)
         .join(Scans)
         .filter(Scans.user_id == current_user.id)
-        .count()
     )
+    vuln_count = vuln_base.count()
+    high_count = vuln_base.filter(
+        Vulnerability.risk_level.in_(["ERROR", "error", "CRITICAL", "critical", "HIGH", "high"])
+    ).count()
+    medium_count = vuln_base.filter(
+        Vulnerability.risk_level.in_(["WARNING", "warning", "MEDIUM", "medium"])
+    ).count()
+    low_count = vuln_base.filter(
+        Vulnerability.risk_level.in_(["INFO", "info", "LOW", "low"])
+    ).count()
     return render_template(
-        "profile.html", scan_count=scan_count, vuln_count=vuln_count
+        "profile.html",
+        scan_count=scan_count,
+        vuln_count=vuln_count,
+        high_count=high_count,
+        medium_count=medium_count,
+        low_count=low_count,
     )
 
 
@@ -66,7 +87,10 @@ def registration():
 
     if form.validate_on_submit():
         if User.query.filter_by(username=form.username.data).first():
-            flash("Не удалось создать аккаунт. Пользователь уже существует.", "error")
+            flash(
+                "Не удалось зарегистрироваться. Проверьте данные и попробуйте ещё раз.",
+                "error",
+            )
             return render_template("register.html", form=form)
 
         new_user = User(username=form.username.data)
@@ -84,7 +108,8 @@ def registration():
 
 # Сам сканнер
 @app.route("/profile/scan", methods=["POST", "GET"])
-@login_required  # проверка на авторизацию
+@login_required
+@limiter.limit("20 per hour; 5 per minute", methods=["POST"])
 def scan():
     # запуск сканера и ввод
     form = ScanForm()
@@ -180,8 +205,13 @@ def scan():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+                scan_record = None
 
-            return render_template("results.html", result=result)
+            return render_template(
+                "results.html",
+                result=result,
+                scan_id=scan_record.id if scan_record else None,
+            )
 
     # проверка ошибки, перенаправляет обратно на скан
     except ValueError as e:
@@ -222,13 +252,114 @@ def AI():
 
 
 
+# История сканирований
+@app.route("/profile/history")
+@login_required
+def history():
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 15
+
+    pagination = (
+        Scans.query.filter_by(user_id=current_user.id)
+        .order_by(Scans.date_scan.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    scan_data = []
+    for s in pagination.items:
+        vulns = Vulnerability.query.filter_by(scan_id=s.id).all()
+        high = sum(
+            1 for v in vulns
+            if v.risk_level.upper() in ("ERROR", "CRITICAL", "HIGH")
+        )
+        medium = sum(
+            1 for v in vulns
+            if v.risk_level.upper() in ("WARNING", "MEDIUM")
+        )
+        low = sum(
+            1 for v in vulns
+            if v.risk_level.upper() in ("INFO", "LOW")
+        )
+        scan_data.append({
+            "scan": s,
+            "total": len(vulns),
+            "high": high,
+            "medium": medium,
+            "low": low,
+        })
+    return render_template("history.html", scan_data=scan_data, pagination=pagination)
+
+
+# Просмотр результатов из истории
+@app.route("/profile/history/<int:scan_id>")
+@login_required
+def scan_detail(scan_id):
+    scan = Scans.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
+    vulns = Vulnerability.query.filter_by(scan_id=scan_id).all()
+    result = {
+        "language": scan.code_language,
+        "results": [
+            {
+                "check_id": v.title,
+                "message": v.description,
+                "start": {"line": v.line},
+                "extra": {
+                    "severity": v.risk_level,
+                    "lines": v.code_snippet,
+                },
+            }
+            for v in vulns
+        ],
+        "errors": [],
+    }
+    return render_template("results.html", result=result, scan_id=scan_id, scan=scan)
+
+
+# Экспорт результатов сканирования в JSON
+@app.route("/api/export/<int:scan_id>")
+@login_required
+def export_scan(scan_id):
+    scan = Scans.query.filter_by(id=scan_id, user_id=current_user.id).first_or_404()
+    vulns = Vulnerability.query.filter_by(scan_id=scan_id).all()
+    data = {
+        "scan_id": scan.id,
+        "date": scan.date_scan.isoformat(),
+        "language": scan.code_language,
+        "vulnerabilities": [
+            {
+                "id": v.id,
+                "title": v.title,
+                "description": v.description,
+                "line": v.line,
+                "code_snippet": v.code_snippet,
+                "vulnerability_type": v.vulnerability_type,
+                "risk_level": v.risk_level,
+            }
+            for v in vulns
+        ],
+    }
+    return Response(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename=securo_scan_{scan_id}.json"
+        },
+    )
+
+
 # Выход
 @app.route("/profile/logout", methods=["POST"])
 @login_required
 def logout():
-    logout_user()
-    flash("Вы вышли из системы")
-    return redirect(url_for("index"))
+    form = LogoutForm()
+    if form.validate_on_submit():
+        logout_user()
+        flash("Вы вышли из системы")
+        return redirect(url_for("index"))
+    flash("Не удалось выйти. Попробуйте ещё раз.", "error")
+    return redirect(url_for("profile"))
 
 
 # Обработчик HTTP 429

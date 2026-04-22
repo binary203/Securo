@@ -40,6 +40,10 @@ class RegistrationForm(FlaskForm):
     )
     submit = SubmitField("Зарегистрироваться")
 
+class LogoutForm(FlaskForm):
+    submit = SubmitField("Выйти")
+
+
 class ScanForm(FlaskForm):
     code = TextAreaField("Code", validators=[Optional(), Length(max=10000)])
     repo_url = StringField(

@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% block head %}
-{% endblock %}
+{% block head %}{% endblock %}
 
 {% block body %}
 <div class="container">
@@ -27,11 +26,30 @@
             </div>
         </div>
 
-        <div class="profile-actions" style="display: flex; gap: 1rem; width: 100%;">
-            <form action="{{ url_for('scan') }}" method="GET" style="flex: 1;">
+        <div class="profile-stats-grid">
+            <div class="profile-stat-cell stat-high">
+                <div class="profile-stat-value">{{ high_count }}</div>
+                <div class="profile-stat-label">Высокий</div>
+            </div>
+            <div class="profile-stat-cell stat-medium">
+                <div class="profile-stat-value">{{ medium_count }}</div>
+                <div class="profile-stat-label">Средний</div>
+            </div>
+            <div class="profile-stat-cell stat-low">
+                <div class="profile-stat-value">{{ low_count }}</div>
+                <div class="profile-stat-label">Низкий</div>
+            </div>
+        </div>
+
+        <div class="profile-actions" style="display: flex; gap: 1rem; width: 100%; flex-wrap: wrap;">
+            <form action="{{ url_for('scan') }}" method="GET" style="flex: 1; min-width: 120px;">
                 <button type="submit" style="width: 100%;">🔍 Новое сканирование</button>
             </form>
-            <form action="{{ url_for('logout') }}" method="POST" style="flex: 1;">
+            <a href="{{ url_for('history') }}" style="flex: 1; min-width: 120px;">
+                <button type="button" class="btn-outline" style="width: 100%;">📋 История</button>
+            </a>
+            <form action="{{ url_for('logout') }}" method="POST" style="flex: 1; min-width: 120px;">
+                {{ logout_form.hidden_tag() }}
                 <button type="submit" class="btn-outline" style="width: 100%;">Выйти</button>
             </form>
         </div>
