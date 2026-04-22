@@ -8,10 +8,16 @@
 <div class="text">
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
-        <!-- Кнопки -->
-        <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
             <button id="AiAssist">🤖 ИИ-Ассистент</button>
+            {% if scan_id %}
+            <a href="{{ url_for('export_scan', scan_id=scan_id) }}" class="btn-outline" style="display: inline-flex; align-items: center; padding: 0.875rem 2rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: none; color: var(--text-primary); border: 1px solid var(--border-color);">📥 Скачать JSON</a>
+            {% else %}
             <button id="exportJson" class="btn-outline">📥 Скачать JSON</button>
+            {% endif %}
+            {% if scan %}
+            <a href="{{ url_for('history') }}" class="back-button" style="margin-left: auto;">← История</a>
+            {% endif %}
         </div>
         <!-- Результаты сканирования-->
         {% if result %}
@@ -21,93 +27,95 @@
                 <strong>Ошибка сканирования:</strong> {{ result.error }}
             </div>
             {% else %}
-                {% if result.results or result.errors %}
-                    {% set findings = result.results or [] %}
-                    {% set errors = result.errors or [] %}
+                {% set findings = result.results or [] %}
 
-                    <div class="stats-grid">
-                        <div class="stat-card {% if findings|length > 0 %}danger{% else %}success{% endif %}">
-                            <div class="stat-label">Уязвимостей</div>
-                            <div class="stat-value">{{ findings|length }}</div>
-                        </div>
-                        <div class="stat-card {% if errors|length > 0 %}danger{% endif %}">
-                            <div class="stat-label">Ошибок</div>
-                            <div class="stat-value">{{ errors|length }}</div>
-                        </div>
+                <div class="stats-grid" style="grid-template-columns: 1fr;">
+                    <div class="stat-card {% if findings|length > 0 %}danger{% else %}success{% endif %}">
+                        <div class="stat-label">Уязвимостей</div>
+                        <div class="stat-value">{{ findings|length }}</div>
                     </div>
-                    <!-- Вывод найденных уязвимостей -->
-                    {% if findings|length > 0 %}
-                    <div class="result-section">
-                        <h2>Найденные уязвимости</h2>
-                        
-                        {% for finding in findings %}
-                        <div class="vulnerability-card" data-vulnerability-index="{{ loop.index }}">
-                            <div class="vulnerability-header">
-                                <span class="vulnerability-title">
-                                    {% if finding.check_id %}
-                                        {{ finding.check_id }}
-                                    {% elif finding.rule_id %}
-                                        {{ finding.rule_id }}
-                                    {% else %}
-                                        Уязвимость #{{ loop.index }}
-                                    {% endif %}
-                                </span>
-                                
-                                {% if finding.extra and finding.extra.severity %}
-                                <span class="severity-badge {{ finding.extra.severity|lower }}">
-                                    {{ finding.extra.severity }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            
-                            {% if finding.path %}
-                            <div class="vulnerability-meta">
-                                <strong>Файл:</strong> {{ finding.path }}
-                                {% if finding.start and finding.start.line %}
-                                    (строка {{ finding.start.line }}{% if finding.end and finding.end.line %} - {{ finding.end.line }}{% endif %})
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                            
-                            {% if finding.message %}
-                            <div class="vulnerability-description">
-                                <strong>Описание:</strong> {{ finding.message }}
-                            </div>
-                            {% elif finding.extra and finding.extra.message %}
-                            <div class="vulnerability-description">
-                                <strong>Описание:</strong> {{ finding.extra.message }}
-                            </div>
-                            {% endif %}
-                            
-                            {% if finding.extra and finding.extra.lines %}
-                            <pre class="vulnerability-code">{{ finding.extra.lines }}</pre>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-     
-                    {% else %}
-                    <div class="success-message">
-                        <strong>✓ Уязвимости не найдены</strong>
-                        <p>Ваш код прошел проверку безопасности.</p>
-                    </div>
-                    {% endif %}
-                    
-                    {% if errors|length > 0 %}
-                    <div class="result-section">
-                        <h2>Ошибки сканирования ({{ errors|length }})</h2>
-                        {% for error in errors %}
-                        <div class="error-message">
-                            <strong>Ошибка:</strong> {{ error.message or error }}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                <!-- Вывод сырых результатов, если уязвимости не найдены-->
-                {% else %}
+                </div>
+
+                {% if findings|length > 0 %}
                 <div class="result-section">
-                    <h2>Сырые Результаты</h2>
-                    <pre>{{ result | tojson(indent=2) }}</pre>
+                    <h2>Найденные уязвимости</h2>
+
+                    <div class="severity-filter" id="severityFilter">
+                        <button class="sev-filter-btn active" data-sev="all">Все</button>
+                        <button class="sev-filter-btn" data-sev="high">Высокий</button>
+                        <button class="sev-filter-btn" data-sev="medium">Средний</button>
+                        <button class="sev-filter-btn" data-sev="low">Низкий</button>
+                    </div>
+
+                    <div id="findingsList">
+                    {% for finding in findings %}
+                    {% set sev = (finding.extra.severity if finding.extra else '')|lower %}
+                    {% if sev in ['error', 'critical', 'high'] %}
+                        {% set sev_group = 'high' %}
+                    {% elif sev in ['warning', 'medium'] %}
+                        {% set sev_group = 'medium' %}
+                    {% elif sev in ['info', 'low'] %}
+                        {% set sev_group = 'low' %}
+                    {% else %}
+                        {% set sev_group = 'other' %}
+                    {% endif %}
+                    <div class="vulnerability-card" data-vulnerability-index="{{ loop.index }}" data-severity="{{ sev_group }}">
+                        <div class="vulnerability-header">
+                            <span class="vulnerability-title">
+                                {% if finding.check_id %}
+                                    {{ finding.check_id }}
+                                {% elif finding.rule_id %}
+                                    {{ finding.rule_id }}
+                                {% else %}
+                                    Уязвимость #{{ loop.index }}
+                                {% endif %}
+                            </span>
+
+                            {% if finding.extra and finding.extra.severity %}
+                            <span class="severity-badge {{ finding.extra.severity|lower }}">
+                                {{ finding.extra.severity }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        {% if finding.path %}
+                        <div class="vulnerability-meta">
+                            <strong>Файл:</strong> {{ finding.path }}
+                            {% if finding.start and finding.start.line %}
+                                (строка {{ finding.start.line }}{% if finding.end and finding.end.line %} - {{ finding.end.line }}{% endif %})
+                            {% endif %}
+                        </div>
+                        {% elif finding.start and finding.start.line %}
+                        <div class="vulnerability-meta">
+                            Строка {{ finding.start.line }}
+                        </div>
+                        {% endif %}
+
+                        {% if finding.message %}
+                        <div class="vulnerability-description">
+                            <strong>Описание:</strong> {{ finding.message }}
+                        </div>
+                        {% elif finding.extra and finding.extra.message %}
+                        <div class="vulnerability-description">
+                            <strong>Описание:</strong> {{ finding.extra.message }}
+                        </div>
+                        {% endif %}
+
+                        {% if finding.extra and finding.extra.lines %}
+                        <pre class="vulnerability-code">{{ finding.extra.lines }}</pre>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    </div>
+                    <div id="noFilterResults" class="no-filter-results" style="display: none;">
+                        В выбранной категории уязвимостей нет.
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="success-message">
+                    <strong>✓ Уязвимости не найдены</strong>
+                    <p>Ваш код прошел проверку безопасности.</p>
                 </div>
                 {% endif %}
             {% endif %}
@@ -199,15 +207,47 @@
     var scanResultData = {{ result | tojson }};
 </script>
 <script>
-    document.getElementById('exportJson').addEventListener('click', function () {
-        var blob = new Blob([JSON.stringify(scanResultData, null, 2)], { type: 'application/json' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'securo_scan_' + new Date().toISOString().slice(0, 10) + '.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
+    var exportBtn = document.getElementById('exportJson');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+            var blob = new Blob([JSON.stringify(scanResultData, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'securo_scan_' + new Date().toISOString().slice(0, 10) + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    (function () {
+        var filterBox = document.getElementById('severityFilter');
+        var list = document.getElementById('findingsList');
+        var empty = document.getElementById('noFilterResults');
+        if (!filterBox || !list) return;
+
+        var buttons = filterBox.querySelectorAll('.sev-filter-btn');
+        var cards = list.querySelectorAll('.vulnerability-card');
+
+        function applyFilter(sev) {
+            var visible = 0;
+            cards.forEach(function (card) {
+                var cardSev = card.getAttribute('data-severity');
+                var show = sev === 'all' || cardSev === sev;
+                card.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
+        }
+
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                buttons.forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                applyFilter(btn.getAttribute('data-sev'));
+            });
+        });
+    })();
 </script>
 <script src="{{ url_for('static', filename='ai.js') }}"></script>
 {% endblock %}
