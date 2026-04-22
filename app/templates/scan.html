@@ -67,12 +67,36 @@
         </div>
         
         <div class="form-group" style="margin-top: 2rem;">
-            {{ form.submit(method='post') }}
+            {{ form.submit(method='post', id='scanSubmit') }}
         </div>
     </form>
-    
+
     <a href="{{ url_for('profile') }}" class="back-button">← Назад</a>
 </div>
 
+<div id="scanLoader" class="scan-loader" aria-hidden="true">
+    <div class="scan-loader-box">
+        <div class="scan-loader-dots">
+            <span></span><span></span><span></span>
+        </div>
+        <div class="scan-loader-title">Идёт сканирование</div>
+        <div class="scan-loader-text">Это может занять до минуты. Не закрывайте страницу.</div>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='scan.js') }}"></script>
+<script>
+(function () {
+    var form = document.getElementById('scanForm');
+    var submit = document.getElementById('scanSubmit');
+    var loader = document.getElementById('scanLoader');
+    if (!form || !submit || !loader) return;
+
+    form.addEventListener('submit', function () {
+        submit.disabled = true;
+        submit.value = 'Сканирование...';
+        loader.classList.add('show');
+    });
+})();
+</script>
 {% endblock %}
