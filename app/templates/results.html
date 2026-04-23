@@ -132,24 +132,27 @@
 <div id="overlay">
     <div class="chat-container" id="chatContainer">
         <div class="chat-header">
-            <div>
-                <h2>🤖 ИИ-ассистент по безопасности</h2>
-                <div class="status" id="chatStatus">Готов к работе</div>
+            <div class="chat-header-left">
+                <div>
+                    <h2>🤖 ИИ-ассистент по безопасности</h2>
+                    <div class="status" id="chatStatus">Готов к работе</div>
+                </div>
             </div>
-            <button class="close-chat" id="closeChat">✕ Закрыть</button>
+            <div class="chat-header-right">
+                <div class="language-selector">
+                    <button class="lang-btn active" data-lang="ru">🇷🇺 RU</button>
+                    <button class="lang-btn" data-lang="eng">🇬🇧 EN</button>
+                </div>
+                <button class="close-chat" id="closeChat">✕ Закрыть</button>
+            </div>
         </div>
 
         <!-- Панель команд -->
         <div class="commands-panel">
-            <button class="command-btn" data-command="/explain">📖 /explain - Объяснить</button>
-            <button class="command-btn" data-command="/fix">🔧 /fix - Исправить</button>
-            <button class="command-btn" data-command="/improve">⚡ /improve - Улучшить</button>
-        </div>
-
-        <!-- Выбор языка  -->
-        <div class="language-selector" style="padding: 0 1.5rem; padding-top: 1rem;">
-            <button class="lang-btn active" data-lang="ru">🇷🇺 Русский</button>
-            <button class="lang-btn" data-lang="eng">🇬🇧 English</button>
+            <span class="commands-panel-label">Команды:</span>
+            <button class="command-btn" data-command="/explain">📖 /explain</button>
+            <button class="command-btn" data-command="/fix">🔧 /fix</button>
+            <button class="command-btn" data-command="/improve">⚡ /improve</button>
         </div>
 
             <!-- Сообщения чата -->
