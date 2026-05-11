@@ -32,6 +32,15 @@
     <div id="toast-container" aria-live="polite"
          data-messages='{{ get_flashed_messages(with_categories=true) | tojson }}'></div>
 
+    <script src="{{ url_for('static', filename='gsap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='ScrollTrigger.min.js') }}"></script>
+    <script>
+    gsap.registerPlugin(ScrollTrigger);
+    </script>
+    <script src="{{ url_for('static', filename='lucide.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='animations.js') }}"></script>
+    <script>lucide.createIcons();</script>
+
     <script>
     (function () {
         const container = document.getElementById('toast-container');

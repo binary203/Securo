@@ -9,11 +9,11 @@
     <div class="results-container">
         <h1>РЕЗУЛЬТАТЫ</h1>
         <div style="margin-bottom: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-            <button id="AiAssist">🤖 ИИ-Ассистент</button>
+            <button id="AiAssist"><i data-lucide="bot" class="btn-icon"></i> ИИ-Ассистент</button>
             {% if scan_id %}
-            <a href="{{ url_for('export_scan', scan_id=scan_id) }}" class="btn-outline" style="display: inline-flex; align-items: center; padding: 0.875rem 2rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: none; color: var(--text-primary); border: 1px solid var(--border-color);">📥 Скачать JSON</a>
+            <a href="{{ url_for('export_scan', scan_id=scan_id) }}" class="btn-outline" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.875rem 2rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: none; color: var(--text-primary); border: 1px solid var(--border-color);"><i data-lucide="download" class="btn-icon"></i> Скачать JSON</a>
             {% else %}
-            <button id="exportJson" class="btn-outline">📥 Скачать JSON</button>
+            <button id="exportJson" class="btn-outline"><i data-lucide="download" class="btn-icon"></i> Скачать JSON</button>
             {% endif %}
             {% if scan %}
             <a href="{{ url_for('history') }}" class="back-button" style="margin-left: auto;">← История</a>
