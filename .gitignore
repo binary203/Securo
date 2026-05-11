@@ -5,3 +5,16 @@ venv/
 instance/
 local_temp/
 *.db
+
+# Editor / IDE
+.claude/
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
