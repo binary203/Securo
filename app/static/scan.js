@@ -55,7 +55,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function handleFiles(files) {
         if (files.length > 0) {
             if (fileInput.files !== files) {
-                fileInput.files = files;
+                const dt = new DataTransfer();
+                Array.from(files).forEach(f => dt.items.add(f));
+                fileInput.files = dt.files;
             }
             
             if (files.length > 5) {

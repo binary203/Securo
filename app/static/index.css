@@ -1,5 +1,5 @@
 :root {
-    --bg-primary: #000000;
+    --bg-primary: #090909;
     --bg-secondary: #0a0a0a;
     --bg-card: #111111;
     --text-primary: #ffffff;
@@ -20,6 +20,17 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 1px solid var(--accent-green);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px rgba(0, 255, 65, 0.12);
+    border-radius: 3px;
 }
 
 body {
@@ -63,6 +74,17 @@ body::after {
         linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
     background-size: 50px 50px;
     z-index: -1;
+}
+
+html::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 998;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
 }
 
 .container {
@@ -206,11 +228,20 @@ input[type="checkbox"]:checked::after {
     font-weight: bold;
 }
 
+.btn-icon {
+    width: 15px;
+    height: 15px;
+    stroke-width: 2;
+    flex-shrink: 0;
+    margin-right: 0.35rem;
+}
+
 button,
 input[type="submit"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.4rem;
     padding: 0.875rem 2rem;
     background: var(--text-primary);
     color: var(--bg-primary);
@@ -1100,24 +1131,27 @@ h1:hover {
 /* LLM */
 /* Оверлей чата */
 #overlay {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.85);
     z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
-    backdrop-filter: blur(8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    backdrop-filter: blur(6px);
 }
 
 #overlay.show {
-    display: flex;
     opacity: 1;
-    align-items: center;
-    justify-content: center;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 /* Контейнер */
@@ -1126,57 +1160,76 @@ h1:hover {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    width: 90%;
-    max-width: 900px;
-    height: 80vh;
-    max-height: 700px;
-    display: none;
+    width: 92vw;
+    max-width: 1100px;
+    height: 88vh;
+    max-height: 900px;
+    display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 255, 65, 0.1);
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
+    box-shadow: 0 24px 80px rgba(0, 255, 65, 0.12);
+    transform: scale(0.95) translateY(8px);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 .chat-container.show {
-    display: flex;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
+    opacity: 1;
 }
 
 /* Заголовок */
 .chat-header {
-    padding: 1.5rem;
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: var(--bg-secondary);
     border-radius: 12px 12px 0 0;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
 }
 
 .chat-header h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: var(--accent-green);
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .chat-header .status {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-top: 0.25rem;
+    white-space: nowrap;
+}
+
+.chat-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
 }
 
 .close-chat {
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.4rem 0.875rem;
+    font-size: 0.8rem;
     cursor: pointer;
     border-radius: 4px;
     transition: var(--transition);
+    white-space: nowrap;
 }
 
 .close-chat:hover {
@@ -1189,32 +1242,41 @@ h1:hover {
 
 /* Панель команд */
 .commands-panel {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1.5rem;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.commands-panel-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 0.25rem;
 }
 
 .command-btn {
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    padding: 0.5rem 1rem;
+    padding: 0.35rem 0.875rem;
     font-size: 0.75rem;
     border-radius: 4px;
     cursor: pointer;
     transition: var(--transition);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
 }
 
 .command-btn:hover {
     border-color: var(--accent-green);
     color: var(--accent-green);
     background: rgba(0, 255, 65, 0.05);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .command-btn.active {
@@ -1479,19 +1541,19 @@ h1:hover {
 /* Выбор языка */
 .language-selector {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: 0.375rem;
 }
 
 .lang-btn {
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.7rem;
     border-radius: 4px;
     cursor: pointer;
     transition: var(--transition);
+    white-space: nowrap;
 }
 
 .lang-btn.active {
@@ -1520,21 +1582,33 @@ h1:hover {
 /* адаптация под мобильные устройства*/
 @media (max-width: 768px) {
     .chat-container {
-        width: 95%;
-        height: 90vh;
+        width: 98vw;
+        height: 95vh;
+        border-radius: 8px;
+    }
+
+    .chat-header {
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .chat-header h2 {
+        font-size: 0.95rem;
     }
 
     .message-content {
-        max-width: 85%;
+        max-width: 88%;
     }
 
     .commands-panel {
+        padding: 0.5rem 1rem;
         gap: 0.25rem;
     }
 
     .command-btn {
         font-size: 0.7rem;
-        padding: 0.4rem 0.8rem;
+        padding: 0.3rem 0.6rem;
     }
 }
 
@@ -1545,13 +1619,109 @@ h1:hover {
 }
 
 .hero {
-    text-align: center;
-    padding: 3rem 1rem 4rem;
+    padding: 3rem 0 5rem;
+    position: relative;
+}
+
+.hero::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -2%;
+    transform: translateY(-50%);
+    width: 52%;
+    height: 80%;
+    background: radial-gradient(ellipse at center, rgba(0, 255, 65, 0.04) 0%, transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.hero-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5rem;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-content {
+    text-align: left;
 }
 
 .hero h1 {
     display: inline-block;
     margin-bottom: 1rem;
+}
+
+/* ── Terminal mockup ────────────────────────────────── */
+.hero-terminal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.78rem;
+    box-shadow: 0 0 60px rgba(0, 255, 65, 0.05), 0 20px 60px rgba(0,0,0,0.5);
+    min-height: 220px;
+}
+
+.terminal-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1rem;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-red    { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green  { background: #28c840; }
+
+.terminal-title {
+    flex: 1;
+    text-align: center;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+}
+
+.terminal-body {
+    padding: 1rem 1.25rem;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.terminal-line {
+    line-height: 1.6;
+    white-space: pre;
+}
+
+.t-prompt { color: var(--accent-green); }
+.t-sym    { color: var(--text-muted); }
+.t-cmd    { color: var(--text-primary); }
+.t-muted  { color: var(--text-muted); }
+.t-info   { color: var(--text-secondary); }
+.t-bar    { color: var(--accent-green); }
+.t-warn   { color: var(--accent-orange); }
+.t-err    { color: var(--accent-red); }
+.t-ok     { color: var(--accent-green); }
+.t-cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.1em;
+    background: var(--accent-green);
+    vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+    margin-left: 2px;
 }
 
 .hero-subtitle {
@@ -1564,15 +1734,16 @@ h1:hover {
 
 .hero-desc {
     color: var(--text-secondary);
-    max-width: 600px;
-    margin: 0 auto 2rem;
+    max-width: 520px;
+    margin: 0 0 2rem;
     line-height: 1.7;
     font-size: 0.95rem;
+    text-wrap: balance;
 }
 
 .hero-actions {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1rem;
     flex-wrap: wrap;
 }
@@ -1652,17 +1823,71 @@ h1:hover {
     border-radius: 8px;
     padding: 1.75rem 1.5rem;
     transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Left accent bar — grows on hover */
+.feature-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 2px;
+    background: var(--accent-green);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0 1px 1px 0;
+}
+
+/* Radar scan sweep on hover */
+.feature-card::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 65, 0.35) 50%, transparent 100%);
+    opacity: 0;
+    pointer-events: none;
 }
 
 .feature-card:hover {
-    border-color: var(--border-hover);
+    border-color: rgba(0, 255, 65, 0.2);
     transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 255, 65, 0.06);
+}
+
+.feature-card:hover::before {
+    transform: scaleY(1);
+}
+
+.feature-card:hover::after {
+    opacity: 1;
+    animation: scanSweep 0.55s ease-out forwards;
+}
+
+@keyframes scanSweep {
+    from { top: -4px; }
+    to   { top: calc(100% + 4px); }
 }
 
 .feature-icon {
-    font-size: 2rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.875rem;
+    color: var(--accent-green);
+}
+
+.feature-icon svg {
+    width: 28px;
+    height: 28px;
+    stroke-width: 1.5;
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.feature-card:hover .feature-icon svg {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.5));
 }
 
 .feature-card h3 {
@@ -1727,13 +1952,87 @@ h1:hover {
     font-size: 0.95rem;
 }
 
+/* ── cursor: pointer ─────────────────────────────────── */
+a,
+button,
+input[type="submit"],
+input[type="button"],
+label[for],
+.cta-btn,
+.sev-filter-btn,
+.command-btn,
+.lang-btn,
+.send-btn,
+.close-chat,
+.action-btn,
+.action-view,
+.action-export,
+.page-link:not(.disabled),
+.history-table tbody tr,
+.file-drop-zone {
+    cursor: pointer;
+}
+
+/* ── text-wrap ───────────────────────────────────────── */
+.feature-card h3,
+.feature-card p,
+.step-card h3,
+.step-card p,
+.cta-desc,
+.hero-desc {
+    text-wrap: balance;
+}
+
+/* ── Steps connector ─────────────────────────────────── */
+.steps-grid {
+    position: relative;
+}
+
+.step-card {
+    position: relative;
+    overflow: visible;
+}
+
+.step-card:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 2.4rem;
+    right: -0.6rem;
+    width: 1.2rem;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-color), var(--accent-green));
+    opacity: 0.4;
+    pointer-events: none;
+}
+
 @media (max-width: 900px) {
+    .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+
+    .hero-content {
+        text-align: center;
+    }
+
+    .hero-desc {
+        margin: 0 auto 2rem;
+    }
+
+    .hero-actions {
+        justify-content: center;
+    }
+
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 
     .steps-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .step-card:not(:last-child)::after {
+        display: none;
     }
 }
 
@@ -2072,5 +2371,4 @@ h1:hover {
         padding: 0.625rem 0.75rem;
     }
 }
-
 

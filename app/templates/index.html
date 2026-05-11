@@ -5,21 +5,40 @@
 {% block body %}
 <div class="landing">
     <section class="hero">
-        <h1>WELCOME</h1>
-        <p class="hero-subtitle">Платформа анализа кода на уязвимости</p>
-        <p class="hero-desc">
-            Загрузите код, ссылку на репозиторий или файл — получите подробный отчёт
-            о найденных уязвимостях и советы от ИИ-ассистента.
-        </p>
+        <div class="hero-inner">
+            <div class="hero-content">
+                <h1>WELCOME</h1>
+                <p class="hero-subtitle">Платформа анализа кода на уязвимости</p>
+                <p class="hero-desc">
+                    Загрузите код, ссылку на репозиторий или файл — получите подробный отчёт
+                    о найденных уязвимостях и советы от ИИ-ассистента.
+                </p>
+                <div class="hero-actions">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('scan') }}" class="cta-btn cta-primary"><i data-lucide="scan-search" class="btn-icon"></i> Начать сканирование</a>
+                        <a href="{{ url_for('profile') }}" class="cta-btn cta-secondary">Профиль</a>
+                    {% else %}
+                        <a href="{{ url_for('registration') }}" class="cta-btn cta-primary">Начать бесплатно</a>
+                        <a href="{{ url_for('login') }}" class="cta-btn cta-secondary">Войти</a>
+                    {% endif %}
+                </div>
+            </div>
 
-        <div class="hero-actions">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('scan') }}" class="cta-btn cta-primary">🔍 Начать сканирование</a>
-                <a href="{{ url_for('profile') }}" class="cta-btn cta-secondary">Профиль</a>
-            {% else %}
-                <a href="{{ url_for('registration') }}" class="cta-btn cta-primary">Начать бесплатно</a>
-                <a href="{{ url_for('login') }}" class="cta-btn cta-secondary">Войти</a>
-            {% endif %}
+            <div class="hero-terminal" aria-hidden="true">
+                <div class="terminal-titlebar">
+                    <span class="terminal-dot dot-red"></span>
+                    <span class="terminal-dot dot-yellow"></span>
+                    <span class="terminal-dot dot-green"></span>
+                    <span class="terminal-title">securo — scanner</span>
+                </div>
+                <div class="terminal-body" id="terminalBody">
+                    <div class="terminal-line">
+                        <span class="t-prompt">~/project</span>
+                        <span class="t-sym"> $ </span>
+                        <span class="t-cmd">securo scan .</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -27,34 +46,34 @@
         <h2 class="section-title">ВОЗМОЖНОСТИ</h2>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon">🛡️</div>
+                <div class="feature-icon"><i data-lucide="shield-check"></i></div>
                 <h3>Semgrep + OWASP</h3>
                 <p>Проверка по правилам OWASP Top 10 и собственным шаблонам. Поддержка более 30 языков программирования.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🤖</div>
-                <h3>ИИ-ассистент</h3>
+                <div class="feature-icon"><i data-lucide="bot"></i></div>
+                <h3>ИИ-ассистент Gemini 2.5</h3>
                 <p>Объяснение уязвимостей, готовые исправления и советы по улучшению кода на русском и английском.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">📋</div>
+                <div class="feature-icon"><i data-lucide="history"></i></div>
                 <h3>История и экспорт</h3>
                 <p>Все сканирования хранятся в профиле. Скачивайте отчёты в JSON для интеграции в CI/CD или документацию.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">⚡</div>
+                <div class="feature-icon"><i data-lucide="layers"></i></div>
                 <h3>Три способа ввода</h3>
                 <p>Вставьте код напрямую, укажите ссылку на GitHub/GitLab или загрузите файлы — до 5 штук по 20 МБ.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🎯</div>
+                <div class="feature-icon"><i data-lucide="file-search-2"></i></div>
                 <h3>Точные отчёты</h3>
                 <p>Для каждой уязвимости — файл, строка, описание, фрагмент кода и уровень риска.</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🔒</div>
+                <div class="feature-icon"><i data-lucide="lock-keyhole"></i></div>
                 <h3>Приватность</h3>
-                <p>Код хранится только в вашем профиле. Сессии защищены CSRF, куки — флагами HttpOnly и SameSite.</p>
+                <p>Код хранится только в вашем профиле. Сессии защищены CSRF, куки — флагами HttpOnly и SameSite. Пароли — хешированы в формате PBKDF2-SHA256</p>
             </div>
         </div>
     </section>
@@ -89,7 +108,7 @@
         <h2 class="section-title">ГОТОВЫ НАЧАТЬ?</h2>
         <p class="cta-desc">Проверьте безопасность своего кода прямо сейчас.</p>
         {% if current_user.is_authenticated %}
-            <a href="{{ url_for('scan') }}" class="cta-btn cta-primary">🔍 Новое сканирование</a>
+            <a href="{{ url_for('scan') }}" class="cta-btn cta-primary"><i data-lucide="scan-search" class="btn-icon"></i> Новое сканирование</a>
         {% else %}
             <a href="{{ url_for('registration') }}" class="cta-btn cta-primary">Зарегистрироваться</a>
         {% endif %}
