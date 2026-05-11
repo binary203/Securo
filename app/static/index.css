@@ -2372,3 +2372,116 @@ label[for],
     }
 }
 
+/* ── Footer ──────────────────────────────────────────── */
+.site-footer {
+    margin-top: 4rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    position: relative;
+}
+
+.site-footer::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 65, 0.3) 50%, transparent 100%);
+    pointer-events: none;
+}
+
+.footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.footer-logo {
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--accent-green) !important;
+    border-bottom: none !important;
+    text-decoration: none;
+    transition: text-shadow 0.3s ease;
+}
+
+.footer-logo:hover {
+    text-shadow: 0 0 14px rgba(0, 255, 65, 0.55);
+    border-bottom: none !important;
+}
+
+.footer-tagline {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+}
+
+.footer-social {
+    display: flex;
+    gap: 0.625rem;
+    align-items: center;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    border-radius: 6px;
+    color: var(--text-muted);
+    background: transparent;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.social-link svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.75;
+}
+
+.social-link:hover {
+    color: var(--accent-green);
+    border-color: rgba(0, 255, 65, 0.35) !important;
+    border-bottom-color: rgba(0, 255, 65, 0.35) !important;
+    background: rgba(0, 255, 65, 0.05);
+    box-shadow: 0 0 14px rgba(0, 255, 65, 0.12);
+    transform: translateY(-2px);
+}
+
+.footer-bottom {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0.875rem 1.5rem 1.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.footer-copy {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+}
+
+@media (max-width: 560px) {
+    .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.25rem;
+    }
+}
+
